@@ -6,7 +6,8 @@
   <meta name="theme-color" content="#008080">
   <title>Maybeline's Diary</title>
   <meta name="description" content="Enter Maybeline's Diary — music, socials, and transmissions from the web.">
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=4">
+  <script async src="https://cse.google.com/cse.js?cx=27ef410f597474080"></script>
 </head>
 <body>
   <main class="desktop" id="desktop" aria-label="Maybeline's Diary desktop">
@@ -63,6 +64,14 @@
               <input id="searchInput" type="search" placeholder="Search the web..." autocomplete="off">
               <button type="submit">Search</button>
             </form>
+
+            <section class="search-results-panel" id="searchResultsPanel" aria-label="Search results" hidden>
+              <div class="search-results-titlebar">
+                <b>Search Results</b>
+                <button type="button" id="clearSearchBtn">Return to Saved Tabs</button>
+              </div>
+              <div class="gcse-searchresults-only" data-gname="maybelineSearch"></div>
+            </section>
 
             <section class="saved-tabs" aria-labelledby="savedTabsHeading">
               <div class="saved-tabs-heading">
@@ -128,6 +137,7 @@
           <button class="side-location active" type="button" data-folder="Media"><span>🖥️</span> My Media</button>
           <button class="side-location" type="button" data-folder="Documents"><span>📄</span> Documents</button>
           <button class="side-location" type="button" data-folder="Pictures"><span>🌄</span> Pictures</button>
+          <button class="side-location" type="button" data-folder="sick kvnt"><span>📷</span> sick kvnt</button>
           <button class="side-location" type="button" data-folder="Videos"><span>🎞️</span> Videos</button>
           <button class="side-location" type="button" data-folder="Music"><span>💿</span> Music</button>
           <button class="side-location" type="button" data-folder="Downloads"><span>⬇️</span> Downloads</button>
@@ -138,6 +148,7 @@
           <div class="files-column-head"><span>Name</span><span>Date modified</span><span>Type</span></div>
           <div class="file-list" id="fileList">
             <button class="file-row" type="button" data-folder="Pictures"><span><i class="list-folder"></i>Pictures</span><time>10/09/1999 11:43 PM</time><em>File Folder</em></button>
+            <button class="file-row" type="button" data-folder="sick kvnt"><span><i class="list-folder"></i>sick kvnt</span><time>10/09/1999 11:59 PM</time><em>File Folder</em></button>
             <button class="file-row" type="button" data-folder="Videos"><span><i class="list-folder"></i>Videos</span><time>10/09/1999 11:43 PM</time><em>File Folder</em></button>
             <button class="file-row" type="button" data-folder="Music"><span><i class="list-folder"></i>Music</span><time>10/09/1999 11:43 PM</time><em>File Folder</em></button>
             <button class="file-row" type="button" data-folder="Documents"><span><i class="list-folder"></i>Documents</span><time>10/09/1999 11:43 PM</time><em>File Folder</em></button>
@@ -146,6 +157,30 @@
             <span class="large-folder"><i></i></span>
             <p>This folder is empty.</p>
             <small>Your media will appear here.</small>
+          </div>
+          <div class="retro-gallery" id="retroGallery" hidden aria-label="sick kvnt pictures">
+            <div class="gallery-note">15 picture(s) — double-click to open</div>
+            <div class="gallery-grid">
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-01.jpg"><span><img src="media/sick-kvnt/photo-01.jpg" alt="Gallery photo 1" loading="lazy"></span><b>IMG_001.JPG</b></button>
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-02.jpg"><span><img src="media/sick-kvnt/photo-02.jpg" alt="Gallery photo 2" loading="lazy"></span><b>IMG_002.JPG</b></button>
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-03.jpg"><span><img src="media/sick-kvnt/photo-03.jpg" alt="Gallery photo 3" loading="lazy"></span><b>IMG_003.JPG</b></button>
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-04.jpg"><span><img src="media/sick-kvnt/photo-04.jpg" alt="Gallery photo 4" loading="lazy"></span><b>IMG_004.JPG</b></button>
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-05.jpg"><span><img src="media/sick-kvnt/photo-05.jpg" alt="Gallery photo 5" loading="lazy"></span><b>IMG_005.JPG</b></button>
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-06.webp"><span><img src="media/sick-kvnt/photo-06.webp" alt="Gallery photo 6" loading="lazy"></span><b>IMG_006.WEBP</b></button>
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-07.jpg"><span><img src="media/sick-kvnt/photo-07.jpg" alt="Gallery photo 7" loading="lazy"></span><b>IMG_007.JPG</b></button>
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-08.jpg"><span><img src="media/sick-kvnt/photo-08.jpg" alt="Gallery photo 8" loading="lazy"></span><b>IMG_008.JPG</b></button>
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-09.jpg"><span><img src="media/sick-kvnt/photo-09.jpg" alt="Gallery photo 9" loading="lazy"></span><b>IMG_009.JPG</b></button>
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-10.jpg"><span><img src="media/sick-kvnt/photo-10.jpg" alt="Gallery photo 10" loading="lazy"></span><b>IMG_010.JPG</b></button>
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-11.jpg"><span><img src="media/sick-kvnt/photo-11.jpg" alt="Gallery photo 11" loading="lazy"></span><b>IMG_011.JPG</b></button>
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-12.webp"><span><img src="media/sick-kvnt/photo-12.webp" alt="Gallery photo 12" loading="lazy"></span><b>IMG_012.WEBP</b></button>
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-13.png"><span><img src="media/sick-kvnt/photo-13.png" alt="Gallery photo 13" loading="lazy"></span><b>IMG_013.PNG</b></button>
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-14.webp"><span><img src="media/sick-kvnt/photo-14.webp" alt="Gallery photo 14" loading="lazy"></span><b>IMG_014.WEBP</b></button>
+              <button class="retro-photo" type="button" data-full="media/sick-kvnt/photo-15.png"><span><img src="media/sick-kvnt/photo-15.png" alt="Gallery photo 15" loading="lazy"></span><b>IMG_015.PNG</b></button>
+            </div>
+          </div>
+          <div class="photo-viewer" id="photoViewer" hidden>
+            <div class="photo-viewer-bar"><b id="photoViewerName">Picture Viewer</b><button type="button" id="closePhotoViewer" aria-label="Close picture">×</button></div>
+            <div class="photo-viewer-canvas"><img id="photoViewerImage" src="" alt="Selected gallery picture"></div>
           </div>
         </div>
       </div>
@@ -175,6 +210,6 @@
       <button type="button" id="restartBtn">restart maybeline</button>
     </div>
   </main>
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

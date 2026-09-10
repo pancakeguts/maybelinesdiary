@@ -254,6 +254,21 @@ button:focus-visible, a:focus-visible { outline: 2px dotted #000; outline-offset
 .tab-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; color: #fff; border: 2px inset #fff; background: #000080; font: bold 23px Arial,sans-serif; }
 .saved-tab.spotify .tab-icon { background: #096f38; }.saved-tab.soundcloud .tab-icon { background: #aa3e00; }.saved-tab.instagram .tab-icon { background: #722272; }.saved-tab.tiktok .tab-icon { background: #111; }.saved-tab.youtube .tab-icon { background: #a00000; }
 .browser-home-footer { margin-top: 28px; color: #666; text-align: center; font: 11px "Courier New",monospace; }
+.search-results-panel {
+  width: min(760px,100%); margin: -18px auto 24px; border: 2px outset #fff;
+  background: #fff; color: #000; box-shadow: 3px 3px 0 #777;
+}
+.search-results-panel[hidden] { display: none; }
+.search-results-titlebar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 30px; padding: 4px 6px; color: #fff; background: linear-gradient(90deg,#000080,#1084d0);
+}
+.search-results-titlebar button { padding: 3px 7px; border: 2px outset #fff; background: #c0c0c0; color: #000; font-size: 11px; }
+.search-results-titlebar button:active { border-style: inset; }
+.search-results-panel .gsc-control-cse { padding: 8px; border: 0; font-family: Arial,sans-serif; }
+.search-results-panel .gsc-search-box { display: none; }
+.search-results-panel .gsc-result { text-align: left; }
+.search-results-panel .gs-title { font-size: 16px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 /* vintage file manager */
@@ -291,6 +306,34 @@ button:focus-visible, a:focus-visible { outline: 2px dotted #000; outline-offset
 .folder-empty small { font-size: 11px; }
 .files-status { margin-top: auto; }
 
+/* sick kvnt retro picture folder */
+.retro-gallery { min-height: 100%; padding: 7px; background: #fff; }
+.retro-gallery[hidden],.photo-viewer[hidden] { display: none; }
+.gallery-note { margin-bottom: 7px; padding: 4px 6px; border: 1px inset #fff; background: #ffffd9; font-size: 12px; }
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(112px,1fr)); gap: 10px 7px; align-items: start; }
+.retro-photo { min-width: 0; padding: 4px; border: 1px solid transparent; background: transparent; color: #000; text-align: center; }
+.retro-photo:hover,.retro-photo.selected { border: 1px dotted #000; background: #d9e7ff; }
+.retro-photo > span {
+  position: relative; display: block; width: 100%; aspect-ratio: 1; overflow: hidden;
+  padding: 4px; border: 2px outset #fff; background: #c0c0c0;
+}
+.retro-photo > span::after,.photo-viewer-canvas::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .24;
+  background: repeating-linear-gradient(0deg,rgba(255,255,255,.15) 0 1px,rgba(0,0,0,.12) 1px 3px);
+  mix-blend-mode: soft-light;
+}
+.retro-photo img {
+  width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated;
+  filter: blur(.55px) contrast(1.12) saturate(.72) sepia(.16) brightness(.94);
+  transform: scale(1.02);
+}
+.retro-photo b { display: block; overflow: hidden; margin-top: 4px; font-size: 11px; font-weight: normal; white-space: nowrap; text-overflow: ellipsis; }
+.photo-viewer { position: absolute; inset: 20px; z-index: 5; display: flex; flex-direction: column; padding: 3px; border: 2px outset #fff; background: #c0c0c0; box-shadow: 4px 4px 0 rgba(0,0,0,.45); }
+.photo-viewer-bar { display: flex; align-items: center; justify-content: space-between; min-height: 25px; padding: 2px 3px 2px 6px; color: #fff; background: linear-gradient(90deg,#000080,#1084d0); font-size: 12px; }
+.photo-viewer-bar button { width: 22px; height: 20px; padding: 0; border: 2px outset #fff; background: #c0c0c0; color: #000; font-weight: bold; }
+.photo-viewer-canvas { position: relative; display: grid; place-items: center; flex: 1; min-height: 0; overflow: hidden; margin-top: 3px; border: 2px inset #fff; background: #181818; }
+.photo-viewer-canvas img { max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: pixelated; filter: blur(.4px) contrast(1.08) saturate(.76) sepia(.12); }
+
 @media (max-width: 600px) {
   .files-shortcut { left: 120px; }
   .browser-home { padding: 24px 10px; }
@@ -303,4 +346,6 @@ button:focus-visible, a:focus-visible { outline: 2px dotted #000; outline-offset
   .side-location span { width: 21px; }
   .files-toolbar button span { display: none; }
   .files-address > span { display: none; }
+  .gallery-grid { grid-template-columns: repeat(2,minmax(100px,1fr)); }
+  .photo-viewer { inset: 6px; }
 }

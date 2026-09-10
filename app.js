@@ -2,7 +2,19 @@
   const startBtn = document.getElementById('startBtn');
   const startMenu = document.getElementById('startMenu');
   const statusText = document.getElementById('statusText');
+  const searchResultsPanel = document.getElementById('searchResultsPanel');
+  const savedTabs = document.querySelector('.saved-tabs');
+  const browserFooter = document.querySelector('.browser-home-footer');
   let topZ = 10;
+
+  function showBrowserHome() {
+    searchResultsPanel.hidden = true;
+    savedTabs.hidden = false;
+    browserFooter.hidden = false;
+    document.getElementById('searchInput').value = '';
+    document.getElementById('pageFrame').scrollTop = 0;
+    statusText.textContent = 'Done';
+  }
 
   const apps = {
     browser: {
@@ -141,10 +153,13 @@
   });
 
   document.getElementById('homeBtn').addEventListener('click', () => {
-    document.getElementById('pageFrame').scrollTop = 0;
+    showBrowserHome();
     statusText.textContent = 'Home';
   });
-  document.getElementById('backBtn').addEventListener('click', () => closeApp('browser'));
+  document.getElementById('backBtn').addEventListener('click', () => {
+    if (!searchResultsPanel.hidden) showBrowserHome();
+    else closeApp('browser');
+  });
   document.getElementById('refreshBtn').addEventListener('click', () => {
     statusText.textContent = 'Refreshing...';
     setTimeout(() => statusText.textContent = 'Done', 450);
@@ -156,8 +171,21 @@
   document.getElementById('webSearch').addEventListener('submit', event => {
     event.preventDefault();
     const query = document.getElementById('searchInput').value.trim();
-    if (query) window.open('https://www.google.com/search?q=' + encodeURIComponent(query), '_blank', 'noopener');
+    if (!query) return;
+    const searchElement = window.google?.search?.cse?.element?.getElement('maybelineSearch');
+    if (!searchElement) {
+      statusText.textContent = 'Search is still loading. Try again.';
+      return;
+    }
+    savedTabs.hidden = true;
+    browserFooter.hidden = true;
+    searchResultsPanel.hidden = false;
+    statusText.textContent = 'Searching selected sites...';
+    searchElement.execute(query);
+    document.getElementById('pageFrame').scrollTop = 0;
+    setTimeout(() => statusText.textContent = 'Done', 500);
   });
+  document.getElementById('clearSearchBtn').addEventListener('click', showBrowserHome);
   document.querySelectorAll('.saved-tab').forEach(link => {
     link.addEventListener('mouseenter', () => statusText.textContent = link.href);
     link.addEventListener('mouseleave', () => statusText.textContent = 'Done');
@@ -166,14 +194,21 @@
   const folderAddress = document.getElementById('folderAddress');
   const fileList = document.getElementById('fileList');
   const folderEmpty = document.getElementById('folderEmpty');
+  const retroGallery = document.getElementById('retroGallery');
+  const photoViewer = document.getElementById('photoViewer');
+  const photoViewerImage = document.getElementById('photoViewerImage');
+  const photoViewerName = document.getElementById('photoViewerName');
   const filesStatus = document.getElementById('filesStatus');
   function showFolder(folder) {
     folderAddress.textContent = 'C:\\Maybeline\\' + folder;
     document.querySelectorAll('.side-location').forEach(button => button.classList.toggle('active', button.dataset.folder === folder));
     const isHome = folder === 'Media';
+    const isGallery = folder === 'sick kvnt';
     fileList.hidden = !isHome;
-    folderEmpty.hidden = isHome;
-    filesStatus.textContent = isHome ? '4 object(s)' : '0 object(s)';
+    retroGallery.hidden = !isGallery;
+    folderEmpty.hidden = isHome || isGallery;
+    photoViewer.hidden = true;
+    filesStatus.textContent = isHome ? '5 object(s)' : isGallery ? '15 picture(s)' : '0 object(s)';
   }
   document.querySelectorAll('.side-location').forEach(button => button.addEventListener('click', () => showFolder(button.dataset.folder)));
   document.querySelectorAll('.file-row').forEach(row => {
@@ -186,6 +221,27 @@
   document.getElementById('filesBack').addEventListener('click', () => showFolder('Media'));
   document.getElementById('newFolderBtn').addEventListener('click', () => {
     filesStatus.textContent = 'New folders will be available when media is added.';
+  });
+  document.querySelectorAll('.retro-photo').forEach(photo => {
+    const openPhoto = () => {
+      photoViewerImage.src = photo.dataset.full;
+      photoViewerName.textContent = photo.querySelector('b').textContent + ' - Picture Viewer';
+      photoViewer.hidden = false;
+      filesStatus.textContent = photo.querySelector('b').textContent;
+    };
+    photo.addEventListener('click', () => {
+      document.querySelectorAll('.retro-photo').forEach(item => item.classList.remove('selected'));
+      photo.classList.add('selected');
+    });
+    photo.addEventListener('dblclick', openPhoto);
+    if (matchMedia('(pointer: coarse)').matches) photo.addEventListener('click', openPhoto);
+    photo.addEventListener('keydown', event => {
+      if (event.key === 'Enter') openPhoto();
+    });
+  });
+  document.getElementById('closePhotoViewer').addEventListener('click', () => {
+    photoViewer.hidden = true;
+    filesStatus.textContent = '15 picture(s)';
   });
 
   startBtn.addEventListener('click', event => {
