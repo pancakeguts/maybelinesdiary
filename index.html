@@ -20,6 +20,11 @@
       <span class="icon-label">maybeline.net</span>
     </button>
 
+    <button class="desktop-icon files-shortcut" id="filesShortcut" type="button" aria-label="Open Files">
+      <span class="folder-desktop-icon" aria-hidden="true"><span></span></span>
+      <span class="icon-label">Files</span>
+    </button>
+
     <section class="browser-window" id="browserWindow" role="dialog" aria-label="Maybeline Explorer" aria-hidden="true">
       <header class="titlebar" id="titlebar">
         <div class="titlebar-name"><span class="tiny-page" aria-hidden="true">M</span> Maybeline Explorer</div>
@@ -49,57 +54,109 @@
 
       <div class="page-frame" id="pageFrame">
         <div class="web-page">
-          <header class="site-header">
-            <div class="marquee" aria-label="Welcome message"><span>★ WELCOME TO MAYBELINE'S DIARY ★ BEST VIEWED AFTER MIDNIGHT ★</span></div>
-            <h1><span>MAYBELINE'S</span><br>DIARY</h1>
-            <p class="subtitle">an unfinished corner of the world wide web</p>
-            <div class="divider" aria-hidden="true">✦ ─────────── ✦ ─────────── ✦</div>
-          </header>
+          <div class="browser-home">
+            <div class="browser-mark"><span>M</span></div>
+            <h1>maybeline.net</h1>
+            <p class="browser-tagline">search the diary</p>
+            <form class="web-search" id="webSearch" role="search">
+              <label class="sr-only" for="searchInput">Search the web</label>
+              <input id="searchInput" type="search" placeholder="Search the web..." autocomplete="off">
+              <button type="submit">Search</button>
+            </form>
 
-          <section class="welcome-box">
-            <p><strong>hello, internet stranger.</strong></p>
-            <p>you found my diary. everything here leads somewhere.</p>
-          </section>
-
-          <section class="links-grid" aria-label="Maybeline social links">
-            <a class="web-link spotify" href="https://open.spotify.com/artist/1Uc0DjqdEoYGZHP9mckx5i" target="_blank" rel="noopener noreferrer">
-              <span class="link-symbol">♫</span><span><b>SPOTIFY</b><small>listen now</small></span>
-            </a>
-            <a class="web-link soundcloud" href="https://soundcloud.com/beautymaybeline" target="_blank" rel="noopener noreferrer">
-              <span class="link-symbol">☁</span><span><b>SOUNDCLOUD</b><small>enter the archive</small></span>
-            </a>
-            <a class="web-link instagram" href="https://www.instagram.com/maybelinediary" target="_blank" rel="noopener noreferrer">
-              <span class="link-symbol">◎</span><span><b>INSTAGRAM</b><small>images & transmissions</small></span>
-            </a>
-            <a class="web-link tiktok" href="https://www.tiktok.com/@maybelinediary" target="_blank" rel="noopener noreferrer">
-              <span class="link-symbol">♪</span><span><b>TIKTOK</b><small>watch the signal</small></span>
-            </a>
-            <a class="web-link youtube" href="https://youtube.com/@beautymaybeline?si=9AN3tMxT73P3k8Nw" target="_blank" rel="noopener noreferrer">
-              <span class="link-symbol">▶</span><span><b>YOUTUBE</b><small>videos</small></span>
-            </a>
-          </section>
-
-          <section class="coming-soon">
-            <span class="blink">NEW!</span>
-            <span> diary entries, guestbook & show tickets coming soon...</span>
-          </section>
-
-          <footer class="site-footer">
-            <div class="counter" aria-label="Visitor number">000013</div>
-            <p>you are visitor number <span class="hot-pink">13</span></p>
-            <p>© 1999–FOREVER MAYBELINE · <a href="mailto:hello@maybelinesdiary.com">EMAIL THE WEBMASTER</a></p>
-            <p class="construction">🚧 ALWAYS UNDER CONSTRUCTION 🚧</p>
-          </footer>
+            <section class="saved-tabs" aria-labelledby="savedTabsHeading">
+              <div class="saved-tabs-heading">
+                <h2 id="savedTabsHeading">Saved Tabs</h2>
+                <span>5 shortcuts</span>
+              </div>
+              <div class="tab-grid">
+                <a class="saved-tab spotify" href="https://open.spotify.com/artist/1Uc0DjqdEoYGZHP9mckx5i" target="_blank" rel="noopener noreferrer">
+                  <span class="tab-icon">♫</span><span><b>Spotify</b><small>open.spotify.com</small></span>
+                </a>
+                <a class="saved-tab soundcloud" href="https://soundcloud.com/beautymaybeline" target="_blank" rel="noopener noreferrer">
+                  <span class="tab-icon">☁</span><span><b>SoundCloud</b><small>soundcloud.com</small></span>
+                </a>
+                <a class="saved-tab instagram" href="https://www.instagram.com/maybelinediary" target="_blank" rel="noopener noreferrer">
+                  <span class="tab-icon">◎</span><span><b>Instagram</b><small>@maybelinediary</small></span>
+                </a>
+                <a class="saved-tab tiktok" href="https://www.tiktok.com/@maybelinediary" target="_blank" rel="noopener noreferrer">
+                  <span class="tab-icon">♪</span><span><b>TikTok</b><small>@maybelinediary</small></span>
+                </a>
+                <a class="saved-tab youtube" href="https://youtube.com/@beautymaybeline?si=9AN3tMxT73P3k8Nw" target="_blank" rel="noopener noreferrer">
+                  <span class="tab-icon">▶</span><span><b>YouTube</b><small>@beautymaybeline</small></span>
+                </a>
+              </div>
+            </section>
+            <footer class="browser-home-footer">maybeline's home on the world wide web · 1999</footer>
+          </div>
         </div>
       </div>
 
       <footer class="statusbar"><span id="statusText">Done</span><span>Internet zone</span></footer>
     </section>
 
+    <section class="browser-window files-window" id="filesWindow" role="dialog" aria-label="Files" aria-hidden="true">
+      <header class="titlebar" id="filesTitlebar">
+        <div class="titlebar-name"><span class="tiny-folder" aria-hidden="true"></span> Files</div>
+        <div class="window-actions">
+          <button type="button" data-action="minimize" data-window="files" aria-label="Minimize Files">_</button>
+          <button type="button" data-action="maximize" data-window="files" aria-label="Maximize Files">□</button>
+          <button type="button" data-action="close" data-window="files" aria-label="Close Files">×</button>
+        </div>
+      </header>
+      <nav class="menu-row" aria-label="Files menu">
+        <button type="button">File</button><button type="button">Edit</button><button type="button">View</button><button type="button">Tools</button><button type="button">Help</button>
+      </nav>
+      <div class="files-toolbar">
+        <button type="button" id="filesBack">← <span>Back</span></button>
+        <button type="button">→</button>
+        <button type="button">↑</button>
+        <span class="toolbar-separator"></span>
+        <button type="button">✂ <span>Cut</span></button>
+        <button type="button">▣ <span>Copy</span></button>
+        <button type="button">▤ <span>Paste</span></button>
+        <span class="toolbar-separator"></span>
+        <button type="button" id="newFolderBtn">📁 <span>New Folder</span></button>
+      </div>
+      <div class="files-address">
+        <span>Address</span>
+        <div><span class="tiny-folder"></span><b id="folderAddress">C:\Maybeline\Media</b></div>
+      </div>
+      <div class="files-body">
+        <aside class="files-sidebar" aria-label="File locations">
+          <div class="sidebar-title">File Locations</div>
+          <button class="side-location active" type="button" data-folder="Media"><span>🖥️</span> My Media</button>
+          <button class="side-location" type="button" data-folder="Documents"><span>📄</span> Documents</button>
+          <button class="side-location" type="button" data-folder="Pictures"><span>🌄</span> Pictures</button>
+          <button class="side-location" type="button" data-folder="Videos"><span>🎞️</span> Videos</button>
+          <button class="side-location" type="button" data-folder="Music"><span>💿</span> Music</button>
+          <button class="side-location" type="button" data-folder="Downloads"><span>⬇️</span> Downloads</button>
+          <div class="sidebar-divider"></div>
+          <button class="side-location" type="button" data-folder="Archive"><span>🗄️</span> Archive</button>
+        </aside>
+        <div class="files-content">
+          <div class="files-column-head"><span>Name</span><span>Date modified</span><span>Type</span></div>
+          <div class="file-list" id="fileList">
+            <button class="file-row" type="button" data-folder="Pictures"><span><i class="list-folder"></i>Pictures</span><time>10/09/1999 11:43 PM</time><em>File Folder</em></button>
+            <button class="file-row" type="button" data-folder="Videos"><span><i class="list-folder"></i>Videos</span><time>10/09/1999 11:43 PM</time><em>File Folder</em></button>
+            <button class="file-row" type="button" data-folder="Music"><span><i class="list-folder"></i>Music</span><time>10/09/1999 11:43 PM</time><em>File Folder</em></button>
+            <button class="file-row" type="button" data-folder="Documents"><span><i class="list-folder"></i>Documents</span><time>10/09/1999 11:43 PM</time><em>File Folder</em></button>
+          </div>
+          <div class="folder-empty" id="folderEmpty" hidden>
+            <span class="large-folder"><i></i></span>
+            <p>This folder is empty.</p>
+            <small>Your media will appear here.</small>
+          </div>
+        </div>
+      </div>
+      <footer class="statusbar files-status"><span id="filesStatus">4 object(s)</span><span>My Computer</span></footer>
+    </section>
+
     <div class="start-menu" id="startMenu" aria-hidden="true">
       <div class="start-side">MAYBELINE</div>
       <div class="start-items">
         <button type="button" id="startInternet"><span>🌐</span> maybeline.net</button>
+        <button type="button" id="startFiles"><span>📁</span> Files</button>
         <div class="menu-line"></div>
         <button type="button" id="shutDown"><span>◉</span> Shut Down...</button>
       </div>
@@ -109,6 +166,7 @@
       <button class="start-button" id="startBtn" type="button" aria-expanded="false"><span class="flag" aria-hidden="true">❖</span> Start</button>
       <div class="task-divider"></div>
       <button class="task-window" id="taskWindow" type="button" hidden><span class="tiny-page">M</span> Maybeline Explorer</button>
+      <button class="task-window" id="taskFiles" type="button" hidden><span class="tiny-folder"></span> Files</button>
       <div class="tray"><span aria-hidden="true">🔊</span><time id="clock">12:00 AM</time></div>
     </footer>
 

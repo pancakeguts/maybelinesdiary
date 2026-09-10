@@ -1,51 +1,25 @@
 (() => {
-  const win = document.getElementById('browserWindow');
-  const shortcut = document.getElementById('siteShortcut');
-  const taskWindow = document.getElementById('taskWindow');
-  const titlebar = document.getElementById('titlebar');
   const startBtn = document.getElementById('startBtn');
   const startMenu = document.getElementById('startMenu');
   const statusText = document.getElementById('statusText');
-  let minimized = false;
-  let isDragging = false;
-  let dragOffsetX = 0;
-  let dragOffsetY = 0;
+  let topZ = 10;
 
-  function openBrowser() {
-    win.classList.add('open');
-    win.setAttribute('aria-hidden', 'false');
-    win.style.display = 'flex';
-    taskWindow.hidden = false;
-    taskWindow.classList.add('active');
-    minimized = false;
-    closeStart();
-  }
-
-  function closeBrowser() {
-    win.classList.remove('open', 'maximized');
-    win.setAttribute('aria-hidden', 'true');
-    win.style.display = 'none';
-    win.style.left = '';
-    win.style.top = '';
-    win.style.transform = '';
-    taskWindow.hidden = true;
-    minimized = false;
-  }
-
-  function minimizeBrowser() {
-    win.style.display = 'none';
-    taskWindow.classList.remove('active');
-    minimized = true;
-  }
-
-  function toggleMaximize() {
-    win.classList.toggle('maximized');
-    if (!win.classList.contains('maximized')) {
-      win.style.left = '';
-      win.style.top = '';
-      win.style.transform = '';
+  const apps = {
+    browser: {
+      window: document.getElementById('browserWindow'),
+      shortcut: document.getElementById('siteShortcut'),
+      task: document.getElementById('taskWindow'),
+      titlebar: document.getElementById('titlebar'),
+      minimized: false
+    },
+    files: {
+      window: document.getElementById('filesWindow'),
+      shortcut: document.getElementById('filesShortcut'),
+      task: document.getElementById('taskFiles'),
+      titlebar: document.getElementById('filesTitlebar'),
+      minimized: false
     }
-  }
+  };
 
   function closeStart() {
     startMenu.classList.remove('open');
@@ -54,23 +28,123 @@
     startBtn.setAttribute('aria-expanded', 'false');
   }
 
-  shortcut.addEventListener('click', () => shortcut.classList.add('selected'));
-  shortcut.addEventListener('dblclick', openBrowser);
-  shortcut.addEventListener('keydown', event => {
-    if (event.key === 'Enter') openBrowser();
-  });
-  if (matchMedia('(pointer: coarse)').matches) {
-    shortcut.addEventListener('click', openBrowser);
+  function focusApp(app) {
+    topZ += 1;
+    app.window.style.zIndex = topZ;
+    Object.values(apps).forEach(item => item.task.classList.toggle('active', item === app && !item.minimized));
   }
 
-  document.getElementById('closeBtn').addEventListener('click', closeBrowser);
-  document.getElementById('minimizeBtn').addEventListener('click', minimizeBrowser);
-  document.getElementById('maximizeBtn').addEventListener('click', toggleMaximize);
+  function openApp(name) {
+    const app = apps[name];
+    app.window.classList.add('open');
+    app.window.setAttribute('aria-hidden', 'false');
+    app.window.style.display = 'flex';
+    app.task.hidden = false;
+    app.minimized = false;
+    focusApp(app);
+    closeStart();
+  }
+
+  function closeApp(name) {
+    const app = apps[name];
+    app.window.classList.remove('open', 'maximized');
+    app.window.setAttribute('aria-hidden', 'true');
+    app.window.style.display = 'none';
+    app.window.style.left = '';
+    app.window.style.top = '';
+    app.window.style.transform = '';
+    app.task.hidden = true;
+    app.minimized = false;
+  }
+
+  function minimizeApp(name) {
+    const app = apps[name];
+    app.window.style.display = 'none';
+    app.task.classList.remove('active');
+    app.minimized = true;
+  }
+
+  function toggleMaximize(name) {
+    const app = apps[name];
+    app.window.classList.toggle('maximized');
+    if (!app.window.classList.contains('maximized')) {
+      app.window.style.left = '';
+      app.window.style.top = '';
+      app.window.style.transform = '';
+    }
+    focusApp(app);
+  }
+
+  function bindShortcut(name) {
+    const app = apps[name];
+    app.shortcut.addEventListener('click', () => {
+      document.querySelectorAll('.desktop-icon').forEach(icon => icon.classList.remove('selected'));
+      app.shortcut.classList.add('selected');
+    });
+    app.shortcut.addEventListener('dblclick', () => openApp(name));
+    app.shortcut.addEventListener('keydown', event => {
+      if (event.key === 'Enter') openApp(name);
+    });
+    if (matchMedia('(pointer: coarse)').matches) app.shortcut.addEventListener('click', () => openApp(name));
+    app.task.addEventListener('click', () => {
+      if (app.minimized || app.window.style.display === 'none') openApp(name);
+      else if (app.task.classList.contains('active')) minimizeApp(name);
+      else focusApp(app);
+    });
+    app.window.addEventListener('pointerdown', () => focusApp(app));
+  }
+
+  function bindDrag(name) {
+    const app = apps[name];
+    let dragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+    app.titlebar.addEventListener('pointerdown', event => {
+      if (event.target.closest('button') || app.window.classList.contains('maximized')) return;
+      dragging = true;
+      const rect = app.window.getBoundingClientRect();
+      offsetX = event.clientX - rect.left;
+      offsetY = event.clientY - rect.top;
+      app.window.style.transform = 'none';
+      app.window.style.left = rect.left + 'px';
+      app.window.style.top = rect.top + 'px';
+      app.titlebar.setPointerCapture(event.pointerId);
+    });
+    app.titlebar.addEventListener('pointermove', event => {
+      if (!dragging) return;
+      const maxX = innerWidth - app.window.offsetWidth;
+      const maxY = innerHeight - 70;
+      app.window.style.left = Math.max(0, Math.min(maxX, event.clientX - offsetX)) + 'px';
+      app.window.style.top = Math.max(0, Math.min(maxY, event.clientY - offsetY)) + 'px';
+    });
+    app.titlebar.addEventListener('pointerup', () => { dragging = false; });
+    app.titlebar.addEventListener('dblclick', () => toggleMaximize(name));
+  }
+
+  Object.keys(apps).forEach(name => {
+    bindShortcut(name);
+    bindDrag(name);
+  });
+
+  document.getElementById('closeBtn').addEventListener('click', () => closeApp('browser'));
+  document.getElementById('minimizeBtn').addEventListener('click', () => minimizeApp('browser'));
+  document.getElementById('maximizeBtn').addEventListener('click', () => toggleMaximize('browser'));
+  document.querySelectorAll('[data-action][data-window]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      const action = button.dataset.action;
+      const name = button.dataset.window;
+      if (action === 'close') closeApp(name);
+      if (action === 'minimize') minimizeApp(name);
+      if (action === 'maximize') toggleMaximize(name);
+    });
+  });
+
   document.getElementById('homeBtn').addEventListener('click', () => {
     document.getElementById('pageFrame').scrollTop = 0;
     statusText.textContent = 'Home';
   });
-  document.getElementById('backBtn').addEventListener('click', closeBrowser);
+  document.getElementById('backBtn').addEventListener('click', () => closeApp('browser'));
   document.getElementById('refreshBtn').addEventListener('click', () => {
     statusText.textContent = 'Refreshing...';
     setTimeout(() => statusText.textContent = 'Done', 450);
@@ -79,9 +153,39 @@
     document.getElementById('pageFrame').scrollTop = 0;
     statusText.textContent = 'Done';
   });
+  document.getElementById('webSearch').addEventListener('submit', event => {
+    event.preventDefault();
+    const query = document.getElementById('searchInput').value.trim();
+    if (query) window.open('https://www.google.com/search?q=' + encodeURIComponent(query), '_blank', 'noopener');
+  });
+  document.querySelectorAll('.saved-tab').forEach(link => {
+    link.addEventListener('mouseenter', () => statusText.textContent = link.href);
+    link.addEventListener('mouseleave', () => statusText.textContent = 'Done');
+  });
 
-  taskWindow.addEventListener('click', () => {
-    if (minimized) openBrowser(); else minimizeBrowser();
+  const folderAddress = document.getElementById('folderAddress');
+  const fileList = document.getElementById('fileList');
+  const folderEmpty = document.getElementById('folderEmpty');
+  const filesStatus = document.getElementById('filesStatus');
+  function showFolder(folder) {
+    folderAddress.textContent = 'C:\\Maybeline\\' + folder;
+    document.querySelectorAll('.side-location').forEach(button => button.classList.toggle('active', button.dataset.folder === folder));
+    const isHome = folder === 'Media';
+    fileList.hidden = !isHome;
+    folderEmpty.hidden = isHome;
+    filesStatus.textContent = isHome ? '4 object(s)' : '0 object(s)';
+  }
+  document.querySelectorAll('.side-location').forEach(button => button.addEventListener('click', () => showFolder(button.dataset.folder)));
+  document.querySelectorAll('.file-row').forEach(row => {
+    row.addEventListener('click', () => {
+      document.querySelectorAll('.file-row').forEach(item => item.classList.remove('selected'));
+      row.classList.add('selected');
+    });
+    row.addEventListener('dblclick', () => showFolder(row.dataset.folder));
+  });
+  document.getElementById('filesBack').addEventListener('click', () => showFolder('Media'));
+  document.getElementById('newFolderBtn').addEventListener('click', () => {
+    filesStatus.textContent = 'New folders will be available when media is added.';
   });
 
   startBtn.addEventListener('click', event => {
@@ -91,7 +195,8 @@
     startBtn.classList.toggle('active', open);
     startBtn.setAttribute('aria-expanded', String(open));
   });
-  document.getElementById('startInternet').addEventListener('click', openBrowser);
+  document.getElementById('startInternet').addEventListener('click', () => openApp('browser'));
+  document.getElementById('startFiles').addEventListener('click', () => openApp('files'));
   document.getElementById('shutDown').addEventListener('click', () => {
     document.getElementById('shutdown').classList.add('show');
     document.getElementById('shutdown').setAttribute('aria-hidden', 'false');
@@ -99,38 +204,11 @@
   document.getElementById('restartBtn').addEventListener('click', () => location.reload());
   document.addEventListener('click', event => {
     if (!startMenu.contains(event.target) && event.target !== startBtn) closeStart();
-    if (!shortcut.contains(event.target)) shortcut.classList.remove('selected');
-  });
-
-  titlebar.addEventListener('pointerdown', event => {
-    if (event.target.closest('button') || win.classList.contains('maximized')) return;
-    isDragging = true;
-    const rect = win.getBoundingClientRect();
-    dragOffsetX = event.clientX - rect.left;
-    dragOffsetY = event.clientY - rect.top;
-    win.style.transform = 'none';
-    win.style.left = rect.left + 'px';
-    win.style.top = rect.top + 'px';
-    titlebar.setPointerCapture(event.pointerId);
-  });
-  titlebar.addEventListener('pointermove', event => {
-    if (!isDragging) return;
-    const maxX = innerWidth - win.offsetWidth;
-    const maxY = innerHeight - 70;
-    win.style.left = Math.max(0, Math.min(maxX, event.clientX - dragOffsetX)) + 'px';
-    win.style.top = Math.max(0, Math.min(maxY, event.clientY - dragOffsetY)) + 'px';
-  });
-  titlebar.addEventListener('pointerup', () => { isDragging = false; });
-  titlebar.addEventListener('dblclick', toggleMaximize);
-
-  document.querySelectorAll('.web-link').forEach(link => {
-    link.addEventListener('mouseenter', () => statusText.textContent = link.href);
-    link.addEventListener('mouseleave', () => statusText.textContent = 'Done');
+    if (!event.target.closest('.desktop-icon')) document.querySelectorAll('.desktop-icon').forEach(icon => icon.classList.remove('selected'));
   });
 
   function updateClock() {
-    const now = new Date();
-    document.getElementById('clock').textContent = now.toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
   }
   updateClock();
   setInterval(updateClock, 30000);
