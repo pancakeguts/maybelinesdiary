@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#008080">
+  <title>Maybeline's Diary</title>
+  <meta name="description" content="Enter Maybeline's Diary — music, socials, and transmissions from the web.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="desktop" id="desktop" aria-label="Maybeline's Diary desktop">
+    <div class="desktop-noise" aria-hidden="true"></div>
+
+    <button class="desktop-icon" id="siteShortcut" type="button" aria-label="Open maybeline.net">
+      <span class="computer-icon" aria-hidden="true">
+        <span class="monitor"><span class="screen-glow">M</span></span>
+        <span class="stand"></span>
+      </span>
+      <span class="icon-label">maybeline.net</span>
+    </button>
+
+    <section class="browser-window" id="browserWindow" role="dialog" aria-label="Maybeline Explorer" aria-hidden="true">
+      <header class="titlebar" id="titlebar">
+        <div class="titlebar-name"><span class="tiny-page" aria-hidden="true">M</span> Maybeline Explorer</div>
+        <div class="window-actions">
+          <button type="button" id="minimizeBtn" aria-label="Minimize">_</button>
+          <button type="button" id="maximizeBtn" aria-label="Maximize">□</button>
+          <button type="button" id="closeBtn" aria-label="Close">×</button>
+        </div>
+      </header>
+
+      <nav class="menu-row" aria-label="Browser menu">
+        <button type="button">File</button><button type="button">Edit</button><button type="button">View</button><button type="button">Favorites</button><button type="button">Help</button>
+      </nav>
+
+      <div class="toolbar">
+        <button class="tool-button" type="button" id="backBtn" aria-label="Back"><span>←</span>Back</button>
+        <button class="tool-button muted" type="button" aria-label="Forward" disabled><span>→</span>Forward</button>
+        <button class="tool-button" type="button" id="refreshBtn" aria-label="Refresh"><span>↻</span>Refresh</button>
+        <button class="tool-button" type="button" id="homeBtn" aria-label="Home"><span>⌂</span>Home</button>
+      </div>
+
+      <div class="address-row">
+        <span>Address</span>
+        <div class="address-box"><span class="address-icon">M</span><span>https://maybelinesdiary.com</span></div>
+        <button type="button" id="goBtn">Go</button>
+      </div>
+
+      <div class="page-frame" id="pageFrame">
+        <div class="web-page">
+          <header class="site-header">
+            <div class="marquee" aria-label="Welcome message"><span>★ WELCOME TO MAYBELINE'S DIARY ★ BEST VIEWED AFTER MIDNIGHT ★</span></div>
+            <h1><span>MAYBELINE'S</span><br>DIARY</h1>
+            <p class="subtitle">an unfinished corner of the world wide web</p>
+            <div class="divider" aria-hidden="true">✦ ─────────── ✦ ─────────── ✦</div>
+          </header>
+
+          <section class="welcome-box">
+            <p><strong>hello, internet stranger.</strong></p>
+            <p>you found my diary. everything here leads somewhere.</p>
+          </section>
+
+          <section class="links-grid" aria-label="Maybeline social links">
+            <a class="web-link spotify" href="https://open.spotify.com/artist/1Uc0DjqdEoYGZHP9mckx5i" target="_blank" rel="noopener noreferrer">
+              <span class="link-symbol">♫</span><span><b>SPOTIFY</b><small>listen now</small></span>
+            </a>
+            <a class="web-link soundcloud" href="https://soundcloud.com/beautymaybeline" target="_blank" rel="noopener noreferrer">
+              <span class="link-symbol">☁</span><span><b>SOUNDCLOUD</b><small>enter the archive</small></span>
+            </a>
+            <a class="web-link instagram" href="https://www.instagram.com/maybelinediary" target="_blank" rel="noopener noreferrer">
+              <span class="link-symbol">◎</span><span><b>INSTAGRAM</b><small>images & transmissions</small></span>
+            </a>
+            <a class="web-link tiktok" href="https://www.tiktok.com/@maybelinediary" target="_blank" rel="noopener noreferrer">
+              <span class="link-symbol">♪</span><span><b>TIKTOK</b><small>watch the signal</small></span>
+            </a>
+            <a class="web-link youtube" href="https://youtube.com/@beautymaybeline?si=9AN3tMxT73P3k8Nw" target="_blank" rel="noopener noreferrer">
+              <span class="link-symbol">▶</span><span><b>YOUTUBE</b><small>videos</small></span>
+            </a>
+          </section>
+
+          <section class="coming-soon">
+            <span class="blink">NEW!</span>
+            <span> diary entries, guestbook & show tickets coming soon...</span>
+          </section>
+
+          <footer class="site-footer">
+            <div class="counter" aria-label="Visitor number">000013</div>
+            <p>you are visitor number <span class="hot-pink">13</span></p>
+            <p>© 1999–FOREVER MAYBELINE · <a href="mailto:hello@maybelinesdiary.com">EMAIL THE WEBMASTER</a></p>
+            <p class="construction">🚧 ALWAYS UNDER CONSTRUCTION 🚧</p>
+          </footer>
+        </div>
+      </div>
+
+      <footer class="statusbar"><span id="statusText">Done</span><span>Internet zone</span></footer>
+    </section>
+
+    <div class="start-menu" id="startMenu" aria-hidden="true">
+      <div class="start-side">MAYBELINE</div>
+      <div class="start-items">
+        <button type="button" id="startInternet"><span>🌐</span> maybeline.net</button>
+        <div class="menu-line"></div>
+        <button type="button" id="shutDown"><span>◉</span> Shut Down...</button>
+      </div>
+    </div>
+
+    <footer class="taskbar">
+      <button class="start-button" id="startBtn" type="button" aria-expanded="false"><span class="flag" aria-hidden="true">❖</span> Start</button>
+      <div class="task-divider"></div>
+      <button class="task-window" id="taskWindow" type="button" hidden><span class="tiny-page">M</span> Maybeline Explorer</button>
+      <div class="tray"><span aria-hidden="true">🔊</span><time id="clock">12:00 AM</time></div>
+    </footer>
+
+    <div class="shutdown" id="shutdown" aria-hidden="true">
+      <p>It is now safe to close this tab.</p>
+      <button type="button" id="restartBtn">restart maybeline</button>
+    </div>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
