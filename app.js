@@ -248,6 +248,14 @@
     {
       title: 'the way i act makes me hurl (prod. me)',
       src: 'the-way-i-act-makes-me-hurl-prod-me.mp3'
+    },
+    {
+      title: 'kingdom (fairoh)',
+      src: 'kingdom-fairoh.mp3'
+    },
+    {
+      title: 'karma (prod. eflen)',
+      src: 'karma-prod-eflen.mp3'
     }
   ];
   let currentTrackIndex = -1;
