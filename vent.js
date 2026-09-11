@@ -11,6 +11,23 @@
   const when = value => new Date(value).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
   const staff = () => ['moderator', 'admin'].includes(profile?.role);
   const fakeEmail = username => `${username.trim().toLowerCase()}@vent.maybelinesdiary.com`;
+  const authStatus = (message, state = '') => { const box = document.getElementById('ventAuthStatus'); box.textContent = message; box.dataset.state = state; };
+  const authError = error => {
+    const message = String(error?.message || error || 'Something went wrong.');
+    if (/invalid login credentials/i.test(message)) return 'That username or password is incorrect.';
+    if (/already registered|already exists|duplicate|saving new user/i.test(message)) return 'That username is already taken.';
+    if (/security purposes|rate limit|too many requests/i.test(message)) return 'Too many attempts. Wait one minute, then try once more.';
+    return message;
+  };
+  async function withAuthButton(form, task) {
+    const button = form.querySelector('[type="submit"]');
+    if (button.disabled) return;
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Please wait…';
+    try { await task(); } catch (error) { authStatus(authError(error), 'error'); }
+    finally { button.disabled = false; button.textContent = label; }
+  }
 
   function showError(error) {
     console.error(error);
@@ -113,7 +130,7 @@
     content().querySelector('[data-lock]')?.addEventListener('click',async()=>{const result=await db.from('posts').update({is_locked:!post.is_locked}).eq('id',post.id);if(result.error)alert(result.error.message);else renderThread(post.id);});
   }
 
-  function focusLogin() { document.getElementById('ventAuth').hidden=false; document.getElementById('ventAuth').scrollIntoView({behavior:'smooth'}); document.getElementById('ventAuthStatus').textContent='Log in to do that.'; }
+  function focusLogin() { const tab=document.querySelector('[data-auth-tab="login"]');tab.click();document.getElementById('ventAuth').hidden=false;document.getElementById('ventAuth').scrollIntoView({behavior:'smooth'});authStatus('Log in to do that.');setTimeout(()=>document.querySelector('#ventLoginForm input[name="username"]').focus(),250); }
   function openComposer() { if(!session)return focusLogin(); document.getElementById('ventComposer').showModal(); }
 
   async function renderProfile() {
@@ -139,13 +156,13 @@
     if(!window.supabase||!window.VENT_CONFIG)return showError('The forum connection did not load. Refresh the page.');
     db=window.supabase.createClient(window.VENT_CONFIG.url,window.VENT_CONFIG.publishableKey);
     try{await loadIdentity();await loadCategories();document.getElementById('ventForum').hidden=false;await renderHome();}catch(error){showError(error);}
-    db.auth.onAuthStateChange(async()=>{await loadIdentity();refreshCurrent();});
+    db.auth.onAuthStateChange(()=>setTimeout(async()=>{try{await loadIdentity();await refreshCurrent();}catch(error){showError(error);}},0));
     db.channel('vent-live').on('postgres_changes',{event:'*',schema:'public',table:'posts'},()=>{status('New forum activity');}).on('postgres_changes',{event:'*',schema:'public',table:'replies'},()=>{status('New reply available');}).subscribe();
   }
 
-  document.querySelectorAll('[data-auth-tab]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-auth-tab]').forEach(b=>b.classList.toggle('active',b===button));document.getElementById('ventLoginForm').hidden=button.dataset.authTab!=='login';document.getElementById('ventSignupForm').hidden=button.dataset.authTab!=='signup';}));
-  document.getElementById('ventLoginForm').addEventListener('submit',async event=>{event.preventDefault();const data=new FormData(event.currentTarget);const result=await db.auth.signInWithPassword({email:fakeEmail(data.get('username')),password:data.get('password')});document.getElementById('ventAuthStatus').textContent=result.error?result.error.message:'Logged in.';});
-  document.getElementById('ventSignupForm').addEventListener('submit',async event=>{event.preventDefault();const data=new FormData(event.currentTarget);const username=data.get('username').trim();if(data.get('password')!==data.get('confirm'))return document.getElementById('ventAuthStatus').textContent='Passwords do not match.';const result=await db.auth.signUp({email:fakeEmail(username),password:data.get('password'),options:{data:{username}}});document.getElementById('ventAuthStatus').textContent=result.error?result.error.message:'Account created.';});
+  document.querySelectorAll('[data-auth-tab]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-auth-tab]').forEach(b=>b.classList.toggle('active',b===button));document.getElementById('ventLoginForm').hidden=button.dataset.authTab!=='login';document.getElementById('ventSignupForm').hidden=button.dataset.authTab!=='signup';authStatus(button.dataset.authTab==='login'?'Enter your username and password.':'Choose a unique username.');}));
+  document.getElementById('ventLoginForm').addEventListener('submit',event=>{event.preventDefault();withAuthButton(event.currentTarget,async()=>{if(!db)throw new Error('Vent is still connecting. Try again in a moment.');const data=new FormData(event.currentTarget);authStatus('Logging in…');const result=await db.auth.signInWithPassword({email:fakeEmail(data.get('username')),password:data.get('password')});if(result.error)throw result.error;authStatus('Logged in.','success');event.currentTarget.reset();});});
+  document.getElementById('ventSignupForm').addEventListener('submit',event=>{event.preventDefault();withAuthButton(event.currentTarget,async()=>{if(!db)throw new Error('Vent is still connecting. Try again in a moment.');const data=new FormData(event.currentTarget);const username=data.get('username').trim();if(data.get('password')!==data.get('confirm'))throw new Error('Passwords do not match.');authStatus('Checking username…');const existing=await db.from('profiles').select('id').ilike('username',username).limit(1);if(existing.error)throw existing.error;if(existing.data.length)throw new Error('That username is already taken.');authStatus('Creating account…');const result=await db.auth.signUp({email:fakeEmail(username),password:data.get('password'),options:{data:{username}}});if(result.error)throw result.error;if(!result.data.session)throw new Error('Sign-up is waiting for email confirmation. In Supabase, turn Confirm email off, save it, then try again.');authStatus(`Welcome, ${username}. Your account is ready.`,'success');event.currentTarget.reset();});});
   document.getElementById('ventPostForm').addEventListener('submit',async event=>{event.preventDefault();if(event.submitter?.value==='cancel')return;const data=new FormData(event.currentTarget);const result=await db.from('posts').insert({author_id:session.user.id,category_id:Number(data.get('category')),title:data.get('title').trim(),body:data.get('body').trim()}).select('id').single();if(result.error){event.preventDefault();return alert(result.error.message);}document.getElementById('ventComposer').close();event.currentTarget.reset();renderThread(result.data.id);});
   document.getElementById('ventComposerCancel').addEventListener('click',()=>document.getElementById('ventComposer').close());
   document.getElementById('ventHomeBtn').addEventListener('click',()=>renderHome());
