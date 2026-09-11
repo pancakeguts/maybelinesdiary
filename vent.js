@@ -54,7 +54,7 @@
     const result = await db.from('categories').select('*').order('sort_order');
     if (result.error) throw result.error;
     const diary = result.data.find(category => category.slug === 'life') || result.data[0];
-    categories = diary ? [{ ...diary, name: 'Diary', description: 'A place to write what you need to get out.' }] : [];
+    categories = diary ? [{ ...diary, name: 'Diary', description: '' }] : [];
     const select = document.querySelector('#ventPostForm select[name="category"]');
     select.replaceChildren(...categories.map(category => { const option = document.createElement('option'); option.value = category.id; option.textContent = category.name; return option; }));
   }
@@ -63,7 +63,7 @@
     currentView = { type: 'home' };
     status('Loading boards…');
     const [postsResult, repliesResult] = await Promise.all([
-      db.from('posts').select('id,category_id,title,created_at,profiles!posts_author_id_fkey(username)').order('created_at', { ascending: false }),
+      db.from('posts').select('id,category_id,author_id,title,created_at,profiles!posts_author_id_fkey(username)').order('created_at', { ascending: false }),
       db.from('replies').select('id,post_id')
     ]);
     if (postsResult.error) return showError(postsResult.error);
@@ -74,9 +74,10 @@
       const boardPosts = posts.filter(post => post.category_id === category.id);
       const replyCount = replies.filter(reply => boardPosts.some(post => post.id === reply.post_id)).length;
       const latest = boardPosts[0];
-      return `<tr><td class="vent-board-icon">▣</td><td><button data-category="${category.id}">${esc(category.name)}</button><div class="vent-meta">${esc(category.description)}</div></td><td>${boardPosts.length}</td><td>${boardPosts.length + replyCount}</td><td>${latest ? `${when(latest.created_at)}<div class="vent-meta">by ${esc(latest.profiles?.username || 'unknown')}</div>` : '—'}</td></tr>`;
+      return `<tr><td class="vent-board-icon">▣</td><td><button data-category="${category.id}">${esc(category.name)}</button></td><td>${boardPosts.length}</td><td>${boardPosts.length + replyCount}</td><td>${latest ? `${when(latest.created_at)}<div class="vent-meta">by <button data-profile="${latest.author_id}">${esc(latest.profiles?.username || 'unknown')}</button></div>` : '—'}</td></tr>`;
     }).join('')}</tbody></table>`;
     content().querySelectorAll('[data-category]').forEach(button => button.addEventListener('click', () => renderCategory(Number(button.dataset.category))));
+    content().querySelectorAll('[data-profile]').forEach(button => button.addEventListener('click', event => { event.stopPropagation(); renderProfile(button.dataset.profile); }));
     status('Ready');
   }
 
@@ -84,20 +85,21 @@
     const category = categories.find(item => item.id === categoryId);
     currentView = { type: 'category', categoryId, query };
     status('Loading discussions…');
-    let request = db.from('posts').select('id,title,body,created_at,updated_at,is_locked,profiles!posts_author_id_fkey(username),replies(count),likes(count)').eq('category_id', categoryId).order('updated_at', { ascending: false });
+    let request = db.from('posts').select('id,author_id,title,body,created_at,updated_at,is_locked,profiles!posts_author_id_fkey(username),replies(count),likes(count)').eq('category_id', categoryId).order('updated_at', { ascending: false });
     if (query) request = request.or(`title.ilike.%${query.replace(/[%_,()]/g, '')}%,body.ilike.%${query.replace(/[%_,()]/g, '')}%`);
     const result = await request;
     if (result.error) return showError(result.error);
-    content().innerHTML = `<div class="vent-board-head"><div class="vent-breadcrumbs"><button data-home>Forum Index</button> » ${esc(category?.name || 'Search')}</div><button class="vent-action" data-compose>New Post</button></div><div class="vent-post-list">${result.data.length ? result.data.map(post => `<article class="vent-post-row"><div><button data-post="${post.id}">${post.is_locked ? '🔒 ' : ''}${esc(post.title)}</button><div class="vent-meta">by ${esc(post.profiles?.username || 'unknown')} · ${when(post.created_at)}</div></div><div>${post.replies?.[0]?.count || 0} replies<br><span class="vent-meta">${post.likes?.[0]?.count || 0} likes</span></div><div class="vent-meta">updated<br>${when(post.updated_at)}</div></article>`).join('') : '<div class="vent-empty">No discussions here yet.</div>'}</div>`;
+    content().innerHTML = `<div class="vent-board-head"><div class="vent-breadcrumbs"><button data-home>Forum Index</button> » ${esc(category?.name || 'Search')}</div><button class="vent-action" data-compose>New Post</button></div><div class="vent-post-list">${result.data.length ? result.data.map(post => `<article class="vent-post-row"><div><button data-post="${post.id}">${post.is_locked ? '🔒 ' : ''}${esc(post.title)}</button><div class="vent-meta">by <button data-profile="${post.author_id}">${esc(post.profiles?.username || 'unknown')}</button> · ${when(post.created_at)}</div></div><div>${post.replies?.[0]?.count || 0} replies<br><span class="vent-meta">${post.likes?.[0]?.count || 0} likes</span></div><div class="vent-meta">updated<br>${when(post.updated_at)}</div></article>`).join('') : '<div class="vent-empty">No discussions here yet.</div>'}</div>`;
     content().querySelector('[data-home]').addEventListener('click', renderHome);
     content().querySelector('[data-compose]').addEventListener('click', openComposer);
     content().querySelectorAll('[data-post]').forEach(button => button.addEventListener('click', () => renderThread(Number(button.dataset.post))));
+    content().querySelectorAll('[data-profile]').forEach(button => button.addEventListener('click', () => renderProfile(button.dataset.profile)));
     status(`${result.data.length} discussion(s)`);
   }
 
   function messageBlock(item, kind, original = false) {
     const mine = session?.user.id === item.author_id;
-    return `<article class="vent-message"><aside class="vent-message-user"><b>${esc(item.profiles?.username || 'unknown')}</b><div class="vent-meta">${esc(item.profiles?.role || 'member')}<br>${when(item.created_at)}</div></aside><div class="vent-message-body">${esc(item.body)}${item.is_edited ? '<div class="vent-meta">edited</div>' : ''}<footer>${original ? `<button class="vent-action" data-like="${item.id}">♥ Like (${item.likes?.[0]?.count || 0})</button>` : ''}${mine || staff() ? `<button class="vent-action" data-edit-${kind}="${item.id}">Edit</button><button class="vent-action" data-delete-${kind}="${item.id}">Delete</button>` : ''}<button class="vent-action" data-report-${kind}="${item.id}">Report</button>${original && staff() ? `<button class="vent-action" data-lock="${item.id}">${item.is_locked ? 'Unlock' : 'Lock'} thread</button>` : ''}</footer></div></article>`;
+    return `<article class="vent-message"><aside class="vent-message-user"><button class="vent-user-link" data-profile="${item.author_id}">${esc(item.profiles?.username || 'unknown')}</button><div class="vent-meta">${esc(item.profiles?.role || 'member')}<br>${when(item.created_at)}</div></aside><div class="vent-message-body">${esc(item.body)}${item.is_edited ? '<div class="vent-meta">edited</div>' : ''}<footer>${original ? `<button class="vent-action" data-like="${item.id}">♥ Like (${item.likes?.[0]?.count || 0})</button>` : ''}${mine || staff() ? `<button class="vent-action" data-edit-${kind}="${item.id}">Edit</button><button class="vent-action" data-delete-${kind}="${item.id}">Delete</button>` : ''}<button class="vent-action" data-report-${kind}="${item.id}">Report</button>${original && staff() ? `<button class="vent-action" data-lock="${item.id}">${item.is_locked ? 'Unlock' : 'Lock'} thread</button>` : ''}</footer></div></article>`;
   }
 
   async function renderThread(postId) {
@@ -115,6 +117,7 @@
     content().querySelector('[data-category]').addEventListener('click', () => renderCategory(post.category_id));
     content().querySelector('#ventReplyForm')?.addEventListener('submit', async event => { event.preventDefault(); const body = new FormData(event.currentTarget).get('body').trim(); const result = await db.from('replies').insert({post_id:postId,author_id:session.user.id,body}); if (result.error) return alert(result.error.message); await db.from('posts').update({updated_at:new Date().toISOString()}).eq('id',postId); renderThread(postId); });
     bindThreadActions(post);
+    content().querySelectorAll('[data-profile]').forEach(button=>button.addEventListener('click',()=>renderProfile(button.dataset.profile)));
     status('Ready');
   }
 
@@ -134,12 +137,34 @@
   function focusLogin() { const tab=document.querySelector('[data-auth-tab="login"]');tab.click();document.getElementById('ventAuth').hidden=false;document.getElementById('ventAuth').scrollIntoView({behavior:'smooth'});authStatus('Log in to do that.');setTimeout(()=>document.querySelector('#ventLoginForm input[name="username"]').focus(),250); }
   function openComposer() { if(!session)return focusLogin(); document.getElementById('ventComposer').showModal(); }
 
-  async function renderProfile() {
-    if(!session)return focusLogin(); currentView={type:'profile'};
-    const posts=await db.from('posts').select('id',{count:'exact',head:true}).eq('author_id',session.user.id);
-    content().innerHTML=`<div class="vent-profile"><h2>${esc(profile.username)}</h2><p>Joined ${when(profile.joined_at)} · ${posts.count || 0} discussions</p><form id="ventProfileForm"><label>Bio<textarea name="bio" maxlength="300">${esc(profile.bio)}</textarea></label><button class="vent-action" type="submit">Save profile</button></form></div>`;
-    content().querySelector('#ventProfileForm').addEventListener('submit',async e=>{e.preventDefault();const bio=new FormData(e.currentTarget).get('bio').trim();const result=await db.from('profiles').update({bio}).eq('id',session.user.id);if(result.error)alert(result.error.message);else{profile.bio=bio;status('Profile saved.');}});
+  async function friendshipWith(userId) {
+    if(!session||userId===session.user.id)return null;
+    const result=await db.from('friendships').select('*').or(`and(requester_id.eq.${session.user.id},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${session.user.id})`).maybeSingle();
+    if(result.error)throw result.error;return result.data;
   }
+
+  async function renderProfile(userId=session?.user.id) {
+    if(!session)return focusLogin();currentView={type:'profile',userId};status('Loading profile…');
+    const [personResult,postsResult]=await Promise.all([db.from('profiles').select('*').eq('id',userId).single(),db.from('posts').select('id',{count:'exact',head:true}).eq('author_id',userId)]);
+    if(personResult.error)return showError(personResult.error);const person=personResult.data;const mine=userId===session.user.id;let friendship=null;if(!mine)friendship=await friendshipWith(userId);
+    let action='';
+    if(!mine&&!friendship)action=`<button class="vent-action" data-add-friend>Add friend</button>`;
+    else if(!mine&&friendship.status==='pending'&&friendship.addressee_id===session.user.id)action=`<button class="vent-action" data-accept-friend>Accept friend request</button><button class="vent-action" data-remove-friend>Decline</button>`;
+    else if(!mine&&friendship.status==='pending')action=`<button class="vent-action" disabled>Friend request sent</button><button class="vent-action" data-remove-friend>Cancel request</button>`;
+    else if(!mine&&friendship.status==='accepted')action=`<button class="vent-action" data-message-user>Message</button><button class="vent-action" data-remove-friend>Remove friend</button>`;
+    content().innerHTML=`<div class="vent-profile"><h2>${esc(person.username)}</h2><p>Joined ${when(person.joined_at)} · ${postsResult.count||0} discussions</p><p>${esc(person.bio)||'<span class="vent-meta">No bio yet.</span>'}</p><div class="vent-profile-actions">${action}</div>${mine?`<form id="ventProfileForm"><label>Bio<textarea name="bio" maxlength="300">${esc(person.bio)}</textarea></label><button class="vent-action" type="submit">Save profile</button></form>`:''}</div>`;
+    content().querySelector('#ventProfileForm')?.addEventListener('submit',async e=>{e.preventDefault();const bio=new FormData(e.currentTarget).get('bio').trim();const result=await db.from('profiles').update({bio}).eq('id',session.user.id);if(result.error)alert(result.error.message);else{profile.bio=bio;status('Profile saved.');}});
+    content().querySelector('[data-add-friend]')?.addEventListener('click',async()=>{const result=await db.from('friendships').insert({requester_id:session.user.id,addressee_id:userId});if(result.error)alert(result.error.message);else renderProfile(userId);});
+    content().querySelector('[data-accept-friend]')?.addEventListener('click',async()=>{const result=await db.from('friendships').update({status:'accepted',updated_at:new Date().toISOString()}).eq('id',friendship.id);if(result.error)alert(result.error.message);else renderProfile(userId);});
+    content().querySelector('[data-remove-friend]')?.addEventListener('click',async()=>{if(!confirm('Remove this connection?'))return;const result=await db.from('friendships').delete().eq('id',friendship.id);if(result.error)alert(result.error.message);else renderProfile(userId);});
+    content().querySelector('[data-message-user]')?.addEventListener('click',()=>renderConversation(userId));status('Ready');
+  }
+
+  async function renderFriends(){if(!session)return focusLogin();currentView={type:'friends'};status('Loading friends…');const result=await db.from('friendships').select('*,requester:profiles!friendships_requester_id_fkey(id,username),addressee:profiles!friendships_addressee_id_fkey(id,username)').or(`requester_id.eq.${session.user.id},addressee_id.eq.${session.user.id}`).order('created_at',{ascending:false});if(result.error)return showError(result.error);const rows=result.data.map(friend=>{const person=friend.requester_id===session.user.id?friend.addressee:friend.requester;const incoming=friend.status==='pending'&&friend.addressee_id===session.user.id;return `<article class="vent-friend-row"><button data-profile="${person.id}">${esc(person.username)}</button><span>${friend.status==='accepted'?'Friend':incoming?'Sent you a request':'Request sent'}</span><span>${incoming?`<button class="vent-action" data-accept="${friend.id}">Accept</button>`:''}${friend.status==='accepted'?`<button class="vent-action" data-chat="${person.id}">Message</button>`:''}</span></article>`}).join('');content().innerHTML=`<div class="vent-board-head"><h2>Friends</h2></div><div class="vent-social-list">${rows||'<div class="vent-empty">No friends or requests yet.</div>'}</div>`;content().querySelectorAll('[data-profile]').forEach(b=>b.addEventListener('click',()=>renderProfile(b.dataset.profile)));content().querySelectorAll('[data-chat]').forEach(b=>b.addEventListener('click',()=>renderConversation(b.dataset.chat)));content().querySelectorAll('[data-accept]').forEach(b=>b.addEventListener('click',async()=>{const r=await db.from('friendships').update({status:'accepted',updated_at:new Date().toISOString()}).eq('id',Number(b.dataset.accept));if(r.error)alert(r.error.message);else renderFriends();}));status('Ready');}
+
+  async function renderMessages(){if(!session)return focusLogin();currentView={type:'messages'};const result=await db.from('friendships').select('requester_id,addressee_id,requester:profiles!friendships_requester_id_fkey(id,username),addressee:profiles!friendships_addressee_id_fkey(id,username)').eq('status','accepted').or(`requester_id.eq.${session.user.id},addressee_id.eq.${session.user.id}`);if(result.error)return showError(result.error);const people=result.data.map(row=>row.requester_id===session.user.id?row.addressee:row.requester);content().innerHTML=`<div class="vent-board-head"><h2>Messages</h2></div><div class="vent-social-list">${people.map(person=>`<article class="vent-friend-row"><button data-chat="${person.id}">${esc(person.username)}</button><span>Friend</span><button class="vent-action" data-chat="${person.id}">Open messages</button></article>`).join('')||'<div class="vent-empty">Add a friend to start messaging.</div>'}</div>`;content().querySelectorAll('[data-chat]').forEach(b=>b.addEventListener('click',()=>renderConversation(b.dataset.chat)));status('Ready');}
+
+  async function renderConversation(userId){if(!session)return focusLogin();currentView={type:'conversation',userId};const [personResult,messagesResult]=await Promise.all([db.from('profiles').select('username').eq('id',userId).single(),db.from('messages').select('*').or(`and(sender_id.eq.${session.user.id},recipient_id.eq.${userId}),and(sender_id.eq.${userId},recipient_id.eq.${session.user.id})`).order('created_at')]);if(personResult.error)return showError(personResult.error);if(messagesResult.error)return showError(messagesResult.error);content().innerHTML=`<div class="vent-board-head"><button class="vent-action" data-inbox>‹ Messages</button><h2>${esc(personResult.data.username)}</h2></div><div class="vent-conversation">${messagesResult.data.map(message=>`<div class="vent-bubble ${message.sender_id===session.user.id?'mine':''}"><div>${esc(message.body)}</div><span>${when(message.created_at)}</span></div>`).join('')||'<div class="vent-empty">No messages yet.</div>'}</div><form class="vent-message-form" id="ventMessageForm"><textarea name="body" maxlength="2000" required placeholder="Write a message…"></textarea><button class="vent-action" type="submit">Send</button></form>`;content().querySelector('[data-inbox]').addEventListener('click',renderMessages);content().querySelector('#ventMessageForm').addEventListener('submit',async e=>{e.preventDefault();const body=new FormData(e.currentTarget).get('body').trim();if(!body)return;const result=await db.from('messages').insert({sender_id:session.user.id,recipient_id:userId,body});if(result.error)alert(result.error.message);else renderConversation(userId);});content().querySelector('.vent-conversation').scrollTop=content().querySelector('.vent-conversation').scrollHeight;status('Ready');}
 
   async function renderModeration() {
     if(!staff())return; currentView={type:'moderation'};
@@ -150,7 +175,7 @@
     content().querySelectorAll('[data-post]').forEach(b=>b.addEventListener('click',()=>renderThread(Number(b.dataset.post))));
   }
 
-  async function refreshCurrent() { if(currentView.type==='thread')return renderThread(currentView.postId);if(currentView.type==='category')return renderCategory(currentView.categoryId,currentView.query);if(currentView.type==='profile')return renderProfile();if(currentView.type==='moderation')return renderModeration();return renderHome(); }
+  async function refreshCurrent() { if(currentView.type==='thread')return renderThread(currentView.postId);if(currentView.type==='category')return renderCategory(currentView.categoryId,currentView.query);if(currentView.type==='profile')return renderProfile(currentView.userId);if(currentView.type==='friends')return renderFriends();if(currentView.type==='messages')return renderMessages();if(currentView.type==='conversation')return renderConversation(currentView.userId);if(currentView.type==='moderation')return renderModeration();return renderHome(); }
 
   async function start() {
     if(started)return; started=true; content().hidden=false;
@@ -168,7 +193,9 @@
   document.getElementById('ventComposerCancel').addEventListener('click',()=>document.getElementById('ventComposer').close());
   document.getElementById('ventHomeBtn').addEventListener('click',()=>renderHome());
   document.getElementById('ventNewBtn').addEventListener('click',openComposer);
-  document.getElementById('ventProfileBtn').addEventListener('click',renderProfile);
+  document.getElementById('ventProfileBtn').addEventListener('click',()=>renderProfile());
+  document.getElementById('ventFriendsBtn').addEventListener('click',renderFriends);
+  document.getElementById('ventMessagesBtn').addEventListener('click',renderMessages);
   document.getElementById('ventModerateBtn').addEventListener('click',renderModeration);
   document.getElementById('ventLogoutBtn').addEventListener('click',()=>db.auth.signOut());
   document.getElementById('ventSearchForm').addEventListener('submit',async event=>{event.preventDefault();const query=document.getElementById('ventSearchInput').value.trim();if(!query)return renderHome();status('Searching…');const result=await db.from('posts').select('id,title,created_at,profiles!posts_author_id_fkey(username),categories(name)').or(`title.ilike.%${query.replace(/[%_,()]/g,'')}%,body.ilike.%${query.replace(/[%_,()]/g,'')}%`).order('created_at',{ascending:false});if(result.error)return showError(result.error);content().innerHTML=`<div class="vent-board-head"><h2>Search: ${esc(query)}</h2><span>${result.data.length} result(s)</span></div><div class="vent-post-list">${result.data.map(post=>`<article class="vent-post-row"><div><button data-post="${post.id}">${esc(post.title)}</button><div class="vent-meta">${esc(post.categories?.name)} · by ${esc(post.profiles?.username)}</div></div><div></div><div class="vent-meta">${when(post.created_at)}</div></article>`).join('')||'<div class="vent-empty">Nothing found.</div>'}</div>`;content().querySelectorAll('[data-post]').forEach(b=>b.addEventListener('click',()=>renderThread(Number(b.dataset.post))));status('Search complete');});
