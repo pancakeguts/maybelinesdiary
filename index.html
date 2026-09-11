@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#008080">
   <title>Maybeline's Diary</title>
   <meta name="description" content="Enter Maybeline's Diary — music, socials, and transmissions from the web.">
-  <link rel="stylesheet" href="styles.css?v=13">
+  <link rel="stylesheet" href="styles.css?v=14">
   <script async src="https://cse.google.com/cse.js?cx=27ef410f597474080"></script>
 </head>
 <body>
@@ -124,6 +124,9 @@
         <button type="button" id="cutBtn">✂ <span>Cut</span></button>
         <button type="button" id="copyBtn">▣ <span>Copy</span></button>
         <button type="button" id="pasteBtn">▤ <span>Paste</span></button>
+        <button type="button" id="undoBtn">↶ <span>Undo</span></button>
+        <button type="button" id="redoBtn">↷ <span>Redo</span></button>
+        <button type="button" id="deleteBtn">🗑 <span>Delete</span></button>
         <span class="toolbar-separator"></span>
         <button type="button" id="newFolderBtn">📁 <span>New Folder</span></button>
       </div>
@@ -238,6 +241,20 @@
     </div>
 
     <div class="dropdown-menu" id="dropdownMenu" hidden></div>
+    <div class="context-menu" id="contextMenu" role="menu" hidden></div>
+
+    <section class="floating-viewer help-window" id="helpWindow" role="dialog" aria-label="Help" hidden>
+      <div class="floating-titlebar help-titlebar" id="helpTitlebar"><b>HELP.EXE — CONNECTION OPEN</b><button type="button" id="closeHelp" aria-label="Close help">×</button></div>
+      <div class="help-terminal">
+        <p class="help-signal">INCOMING SIGNAL...</p>
+        <p>You pressed Help. Maybe it was just curiosity. Maybe it wasn’t.</p>
+        <p>If the screen feels too loud, you don’t have to hold it alone.</p>
+        <div class="help-contact"><span>LIFELINE AUSTRALIA</span><a href="tel:131114">CALL 13 11 14</a><a href="sms:0477131114">TEXT 0477 13 11 14</a></div>
+        <p class="help-emergency">If life is in immediate danger, call <a href="tel:000">000</a>.</p>
+        <a class="help-chat" href="https://www.lifeline.org.au/chat" target="_blank" rel="noopener noreferrer">OPEN 24/7 CRISIS CHAT</a>
+        <p class="help-footer">you are still connected.</p>
+      </div>
+    </section>
 
     <footer class="taskbar">
       <button class="start-button" id="startBtn" type="button" aria-expanded="false"><span class="flag" aria-hidden="true">❖</span> Start</button>
@@ -264,6 +281,6 @@
       <button type="button" id="restartBtn">restart maybeline</button>
     </div>
   </main>
-  <script src="app.js?v=13"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>
