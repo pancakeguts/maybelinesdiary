@@ -5,7 +5,7 @@
   let profile = null;
   let categories = [];
   let currentView = { type: 'home' };
-  let unreadCount = Number(localStorage.getItem('vent-unread-count') || 0);
+  let unread = (() => { try { return { forum: 0, friends: 0, messages: 0, ...JSON.parse(localStorage.getItem('vent-unread-sections') || '{}') }; } catch (_) { return { forum: 0, friends: 0, messages: 0 }; } })();
   const content = () => document.getElementById('ventForum');
   const status = message => { document.getElementById('ventStatus').textContent = message; };
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
@@ -56,26 +56,28 @@
   const ventConfirm = (message, title = 'Please confirm') => ventDialog({ title, message, confirmText: 'Delete', danger: true });
   const ventPrompt = (message, value = '', title = 'Vent') => ventDialog({ title, label: message, value });
 
-  function updateUnread(count = unreadCount) {
-    unreadCount = Math.max(0, count);
-    localStorage.setItem('vent-unread-count', String(unreadCount));
+  function updateUnread(section = null, change = 0) {
+    if (section) unread[section] = Math.max(0, (unread[section] || 0) + change);
+    localStorage.setItem('vent-unread-sections', JSON.stringify(unread));
+    const total = unread.forum + unread.friends + unread.messages;
     ['ventDesktopBadge', 'ventTaskBadge'].forEach(id => {
       const badge = document.getElementById(id);
-      badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
-      badge.hidden = unreadCount === 0;
+      badge.textContent = total > 99 ? '99+' : String(total);
+      badge.hidden = total === 0;
     });
+    [['ventForumBadge','forum'],['ventFriendsBadge','friends'],['ventMessagesBadge','messages']].forEach(([id,key]) => { const badge=document.getElementById(id); badge.textContent=unread[key]>99?'99+':String(unread[key]); badge.hidden=unread[key]===0; });
   }
 
-  function clearUnread() { updateUnread(0); }
+  function clearUnread(section) { if (!section) return; unread[section] = 0; updateUnread(); }
 
-  function openNotification(action) {
+  function openNotification(section, action) {
     window.openDesktopApp?.('vent');
-    clearUnread();
+    clearUnread(section);
     setTimeout(() => action?.(), 80);
   }
 
-  function showVentNotification(title, message, action) {
-    updateUnread(unreadCount + 1);
+  function showVentNotification(section, title, message, action) {
+    updateUnread(section, 1);
     const toast = document.createElement('article');
     toast.className = 'vent-toast';
     const heading = document.createElement('div');
@@ -89,7 +91,7 @@
     heading.append(titleText, close); toast.append(heading, body);
     document.getElementById('ventNotificationStack').prepend(toast);
     close.addEventListener('click', () => toast.remove());
-    body.addEventListener('click', () => { toast.remove(); openNotification(action); });
+    body.addEventListener('click', () => { toast.remove(); openNotification(section, action); });
     setTimeout(() => toast.remove(), 12000);
   }
 
@@ -103,24 +105,24 @@
     const row = payload.new || {};
     if (table === 'posts' && payload.eventType === 'INSERT' && row.author_id !== session?.user.id) {
       const username = await notificationUsername(row.author_id);
-      showVentNotification('New post', `${username} posted “${row.title || 'a new discussion'}”.`, () => renderThread(row.id));
+      showVentNotification('forum', 'New post', `${username} posted “${row.title || 'a new discussion'}”.`, () => renderThread(row.id));
     }
     if (table === 'replies' && payload.eventType === 'INSERT' && row.author_id !== session?.user.id) {
       const username = await notificationUsername(row.author_id);
-      showVentNotification('New reply', `${username} added a reply.`, () => renderThread(row.post_id));
+      showVentNotification('forum', 'New reply', `${username} added a reply.`, () => renderThread(row.post_id));
     }
     if (table === 'friendships' && session && payload.eventType === 'INSERT' && row.addressee_id === session.user.id) {
       const username = await notificationUsername(row.requester_id);
-      showVentNotification('New friend request', `${username} wants to add you as a friend.`, renderFriends);
+      showVentNotification('friends', 'New friend request', `${username} wants to add you as a friend.`, renderFriends);
     }
     if (table === 'friendships' && session && payload.eventType === 'UPDATE' && row.status === 'accepted' && row.requester_id === session.user.id) {
       const username = await notificationUsername(row.addressee_id);
-      showVentNotification('Friend request accepted', `${username} accepted your friend request.`, renderFriends);
+      showVentNotification('friends', 'Friend request accepted', `${username} accepted your friend request.`, renderFriends);
     }
     if (table === 'messages' && session && payload.eventType === 'INSERT' && row.recipient_id === session.user.id && row.sender_id !== session.user.id) {
       const username = await notificationUsername(row.sender_id);
       const preview = String(row.body || '').slice(0, 90);
-      showVentNotification('New message', `${username}: ${preview}`, () => renderConversation(row.sender_id));
+      showVentNotification('messages', 'New message', `${username}: ${preview}`, () => renderConversation(row.sender_id));
       if (currentView.type === 'conversation' && currentView.userId === row.sender_id) renderConversation(row.sender_id);
     }
   }
@@ -302,16 +304,16 @@
   document.getElementById('ventSignupForm').addEventListener('submit',event=>{event.preventDefault();withAuthButton(event.currentTarget,async()=>{if(!db)throw new Error('Vent is still connecting. Try again in a moment.');const data=new FormData(event.currentTarget);const username=data.get('username').trim();if(data.get('password')!==data.get('confirm'))throw new Error('Passwords do not match.');authStatus('Checking username…');const existing=await db.from('profiles').select('id').ilike('username',username).limit(1);if(existing.error)throw existing.error;if(existing.data.length)throw new Error('That username is already taken.');authStatus('Creating account…');const result=await db.auth.signUp({email:fakeEmail(username),password:data.get('password'),options:{data:{username}}});if(result.error)throw result.error;if(!result.data.session)throw new Error('Sign-up is waiting for email confirmation. In Supabase, turn Confirm email off, save it, then try again.');authStatus(`Welcome, ${username}. Your account is ready.`,'success');event.currentTarget.reset();});});
   document.getElementById('ventPostForm').addEventListener('submit',async event=>{event.preventDefault();if(event.submitter?.value==='cancel')return;const data=new FormData(event.currentTarget);const result=await db.from('posts').insert({author_id:session.user.id,category_id:Number(data.get('category')),title:data.get('title').trim(),body:data.get('body').trim()}).select('id').single();if(result.error){event.preventDefault();return ventMessage(result.error.message,'Could not create post');}document.getElementById('ventComposer').close();event.currentTarget.reset();renderThread(result.data.id);});
   document.getElementById('ventComposerCancel').addEventListener('click',()=>document.getElementById('ventComposer').close());
-  document.getElementById('ventHomeBtn').addEventListener('click',()=>renderHome());
+  document.getElementById('ventHomeBtn').addEventListener('click',()=>{clearUnread('forum');renderHome();});
   document.getElementById('ventNewBtn').addEventListener('click',openComposer);
   document.getElementById('ventProfileBtn').addEventListener('click',()=>renderProfile());
-  document.getElementById('ventFriendsBtn').addEventListener('click',renderFriends);
-  document.getElementById('ventMessagesBtn').addEventListener('click',renderMessages);
+  document.getElementById('ventFriendsBtn').addEventListener('click',()=>{clearUnread('friends');renderFriends();});
+  document.getElementById('ventMessagesBtn').addEventListener('click',()=>{clearUnread('messages');renderMessages();});
   document.getElementById('ventModerateBtn').addEventListener('click',renderModeration);
   document.getElementById('ventLogoutBtn').addEventListener('click',()=>db.auth.signOut());
   document.getElementById('ventSearchForm').addEventListener('submit',async event=>{event.preventDefault();const query=document.getElementById('ventSearchInput').value.trim();if(!query)return renderHome();status('Searching…');const result=await db.from('posts').select('id,title,created_at,profiles!posts_author_id_fkey(username),categories(name)').or(`title.ilike.%${query.replace(/[%_,()]/g,'')}%,body.ilike.%${query.replace(/[%_,()]/g,'')}%`).order('created_at',{ascending:false});if(result.error)return showError(result.error);content().innerHTML=`<div class="vent-board-head"><h2>Search: ${esc(query)}</h2><span>${result.data.length} result(s)</span></div><div class="vent-post-list">${result.data.map(post=>`<article class="vent-post-row"><div><button data-post="${post.id}">${esc(post.title)}</button><div class="vent-meta">${esc(post.categories?.name)} · by ${esc(post.profiles?.username)}</div></div><div></div><div class="vent-meta">${when(post.created_at)}</div></article>`).join('')||'<div class="vent-empty">Nothing found.</div>'}</div>`;content().querySelectorAll('[data-post]').forEach(b=>b.addEventListener('click',()=>renderThread(Number(b.dataset.post))));status('Search complete');});
   window.initVent=start;
-  window.addEventListener('desktopappopen', event => { if (event.detail?.name === 'vent') clearUnread(); });
+  window.addEventListener('desktopappopen', event => { if (event.detail?.name === 'vent') updateUnread(); });
   updateUnread();
   start();
 })();
