@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#008080">
   <title>Maybeline's Diary</title>
   <meta name="description" content="Enter Maybeline's Diary — music, socials, and transmissions from the web.">
-  <link rel="stylesheet" href="styles.css?v=14">
+  <link rel="stylesheet" href="styles.css?v=15">
   <script async src="https://cse.google.com/cse.js?cx=27ef410f597474080"></script>
 </head>
 <body>
@@ -249,9 +249,10 @@
         <p class="help-signal">INCOMING SIGNAL...</p>
         <p>You pressed Help. Maybe it was just curiosity. Maybe it wasn’t.</p>
         <p>If the screen feels too loud, you don’t have to hold it alone.</p>
-        <div class="help-contact"><span>LIFELINE AUSTRALIA</span><a href="tel:131114">CALL 13 11 14</a><a href="sms:0477131114">TEXT 0477 13 11 14</a></div>
-        <p class="help-emergency">If life is in immediate danger, call <a href="tel:000">000</a>.</p>
-        <a class="help-chat" href="https://www.lifeline.org.au/chat" target="_blank" rel="noopener noreferrer">OPEN 24/7 CRISIS CHAT</a>
+        <label class="help-region">YOUR REGION<select id="helpRegion"><option value="WORLD">Worldwide</option><option value="AU">Australia</option><option value="US">United States</option><option value="CA">Canada</option><option value="GB">United Kingdom & Ireland</option></select></label>
+        <div class="help-contact"><span id="helpContactName">WORLDWIDE SUPPORT</span><div id="helpContactLinks"></div></div>
+        <p class="help-emergency">If life is in immediate danger, contact your local emergency services now.</p>
+        <a class="help-chat" href="https://findahelpline.com/" target="_blank" rel="noopener noreferrer">FIND A VERIFIED HELPLINE ANYWHERE</a>
         <p class="help-footer">you are still connected.</p>
       </div>
     </section>
@@ -281,6 +282,6 @@
       <button type="button" id="restartBtn">restart maybeline</button>
     </div>
   </main>
-  <script src="app.js?v=14"></script>
+  <script src="app.js?v=15"></script>
 </body>
 </html>

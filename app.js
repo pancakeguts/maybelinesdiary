@@ -708,6 +708,38 @@
 
   const dropdownMenu = document.getElementById('dropdownMenu');
   const helpWindow = document.getElementById('helpWindow');
+  const helpRegion = document.getElementById('helpRegion');
+  const helpContacts = {
+    WORLD: { name: 'WORLDWIDE SUPPORT', links: [['SEARCH VERIFIED LOCAL SERVICES', 'https://findahelpline.com/']] },
+    AU: { name: 'LIFELINE AUSTRALIA', links: [['CALL 13 11 14', 'tel:131114'], ['TEXT 0477 13 11 14', 'sms:0477131114'], ['OPEN 24/7 CHAT', 'https://www.lifeline.org.au/chat']] },
+    US: { name: '988 SUICIDE & CRISIS LIFELINE — U.S.', links: [['CALL 988', 'tel:988'], ['TEXT 988', 'sms:988'], ['OPEN 988 LIFELINE', 'https://988lifeline.org/']] },
+    CA: { name: '9-8-8 SUICIDE CRISIS HELPLINE — CANADA', links: [['CALL 9-8-8', 'tel:988'], ['TEXT 9-8-8', 'sms:988'], ['OPEN 9-8-8 CANADA', 'https://988.ca/']] },
+    GB: { name: 'SAMARITANS — UK & IRELAND', links: [['CALL 116 123', 'tel:116123'], ['OPEN SAMARITANS', 'https://www.samaritans.org/how-we-can-help/contact-samaritan/']] }
+  };
+  function renderHelpContact(region) {
+    const contact = helpContacts[region] || helpContacts.WORLD;
+    document.getElementById('helpContactName').textContent = contact.name;
+    const links = document.getElementById('helpContactLinks');
+    links.replaceChildren();
+    contact.links.forEach(([label, href]) => {
+      const link = document.createElement('a');
+      link.textContent = label;
+      link.href = href;
+      if (href.startsWith('http')) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
+      links.append(link);
+    });
+  }
+  function detectHelpRegion() {
+    const languageRegion = (navigator.language.split('-')[1] || '').toUpperCase();
+    if (helpContacts[languageRegion]) return languageRegion;
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    if (zone.startsWith('Australia/')) return 'AU';
+    if (zone.startsWith('America/')) return 'WORLD';
+    return 'WORLD';
+  }
+  helpRegion.value = detectHelpRegion();
+  renderHelpContact(helpRegion.value);
+  helpRegion.addEventListener('change', () => renderHelpContact(helpRegion.value));
   function openHelp() {
     helpWindow.hidden = false;
     topZ += 1;
