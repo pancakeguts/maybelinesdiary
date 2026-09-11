@@ -70,8 +70,11 @@
     focusApp(app);
     if (name === 'trash') renderTrash();
     if (name === 'vent') window.initVent?.();
+    window.dispatchEvent(new CustomEvent('desktopappopen', { detail: { name } }));
     closeStart();
   }
+
+  window.openDesktopApp = openApp;
 
   function closeApp(name) {
     const app = apps[name];
