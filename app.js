@@ -30,6 +30,13 @@
       task: document.getElementById('taskFiles'),
       titlebar: document.getElementById('filesTitlebar'),
       minimized: false
+    },
+    trash: {
+      window: document.getElementById('trashWindow'),
+      shortcut: document.getElementById('trashShortcut'),
+      task: document.getElementById('taskTrash'),
+      titlebar: document.getElementById('trashTitlebar'),
+      minimized: false
     }
   };
 
@@ -54,6 +61,7 @@
     app.task.hidden = false;
     app.minimized = false;
     focusApp(app);
+    if (name === 'trash') renderTrash();
     closeStart();
   }
 
@@ -291,6 +299,8 @@
   let fileClipboard = null;
   let deletedPhotoIds = new Set(JSON.parse(localStorage.getItem('maybeline-deleted-photos') || '[]'));
   let deletedTrackIndexes = new Set(JSON.parse(localStorage.getItem('maybeline-deleted-tracks') || '[]'));
+  let purgedPhotoIds = new Set(JSON.parse(localStorage.getItem('maybeline-purged-photos') || '[]'));
+  let purgedTrackIndexes = new Set(JSON.parse(localStorage.getItem('maybeline-purged-tracks') || '[]'));
   const undoStack = [];
   const redoStack = [];
   function snapshotFiles() {
@@ -300,7 +310,59 @@
     saveFileLocations();
     localStorage.setItem('maybeline-deleted-photos', JSON.stringify([...deletedPhotoIds]));
     localStorage.setItem('maybeline-deleted-tracks', JSON.stringify([...deletedTrackIndexes]));
+    localStorage.setItem('maybeline-purged-photos', JSON.stringify([...purgedPhotoIds]));
+    localStorage.setItem('maybeline-purged-tracks', JSON.stringify([...purgedTrackIndexes]));
   }
+  function renderTrash() {
+    const content = document.getElementById('trashContent');
+    content.replaceChildren();
+    const deleted = [
+      ...photos.filter(photo => deletedPhotoIds.has(photo.dataset.id) && !purgedPhotoIds.has(photo.dataset.id)).map(photo => ({ kind: 'image', id: photo.dataset.id, name: photo.querySelector('b').textContent })),
+      ...audioTracks.map((track, index) => ({ kind: 'audio', id: String(index), name: track.title })).filter(item => deletedTrackIndexes.has(Number(item.id)) && !purgedTrackIndexes.has(Number(item.id)))
+    ];
+    if (!deleted.length) {
+      const empty = document.createElement('div');
+      empty.className = 'trash-empty';
+      empty.textContent = 'Recycle Bin is empty.';
+      content.append(empty);
+    }
+    deleted.forEach(item => {
+      const row = document.createElement('button');
+      row.className = 'trash-item';
+      row.type = 'button';
+      row.dataset.kind = item.kind;
+      row.dataset.id = item.id;
+      row.innerHTML = `<span>${item.kind === 'image' ? '🖼' : '♫'}</span><b></b><span>${item.kind} file</span>`;
+      row.querySelector('b').textContent = item.name;
+      row.addEventListener('click', () => {
+        document.querySelectorAll('.trash-item').forEach(entry => entry.classList.remove('selected'));
+        row.classList.add('selected');
+      });
+      content.append(row);
+    });
+    document.getElementById('trashStatus').textContent = `${deleted.length} object(s)`;
+  }
+  function restoreTrashItem() {
+    const item = document.querySelector('.trash-item.selected');
+    if (!item) { document.getElementById('trashStatus').textContent = 'Select an item to restore.'; return; }
+    recordFileChange();
+    if (item.dataset.kind === 'image') deletedPhotoIds.delete(item.dataset.id);
+    else deletedTrackIndexes.delete(Number(item.dataset.id));
+    persistFileState();
+    renderTrash();
+    showFolder(currentFolder, false);
+  }
+  function emptyTrash() {
+    deletedPhotoIds.forEach(id => purgedPhotoIds.add(id));
+    deletedTrackIndexes.forEach(id => purgedTrackIndexes.add(id));
+    deletedPhotoIds.clear();
+    deletedTrackIndexes.clear();
+    persistFileState();
+    renderTrash();
+    showFolder(currentFolder, false);
+  }
+  document.getElementById('restoreTrashBtn').addEventListener('click', restoreTrashItem);
+  document.getElementById('emptyTrashBtn').addEventListener('click', emptyTrash);
   function recordFileChange() { undoStack.push(snapshotFiles()); redoStack.length = 0; }
   function restoreFileState(state) {
     fileLocations = { ...state.locations };
@@ -308,6 +370,7 @@
     deletedTrackIndexes = new Set(state.tracks);
     persistFileState();
     showFolder(currentFolder, false);
+    if (apps.trash.window.classList.contains('open')) renderTrash();
   }
   function undoFileChange() {
     if (!undoStack.length) { filesStatus.textContent = 'Nothing to undo.'; return; }
@@ -345,8 +408,8 @@
     document.querySelectorAll('.side-location').forEach(button => button.classList.toggle('active', button.dataset.folder === folder));
     const isHome = folder === 'Media';
     const isMusic = folder === 'Music';
-    const visiblePhotos = photos.filter(photo => fileLocations[photo.dataset.id] === folder && !deletedPhotoIds.has(photo.dataset.id));
-    const visibleTracks = folder === 'Music' ? audioTracks.filter((track, index) => !deletedTrackIndexes.has(index)) : [];
+    const visiblePhotos = photos.filter(photo => fileLocations[photo.dataset.id] === folder && !deletedPhotoIds.has(photo.dataset.id) && !purgedPhotoIds.has(photo.dataset.id));
+    const visibleTracks = folder === 'Music' ? audioTracks.filter((track, index) => !deletedTrackIndexes.has(index) && !purgedTrackIndexes.has(index)) : [];
     photos.forEach(photo => { photo.hidden = !visiblePhotos.includes(photo); });
     document.querySelectorAll('.music-file').forEach(button => { button.hidden = !visibleTracks.includes(audioTracks[Number(button.dataset.trackIndex)]); });
     fileList.hidden = !isHome;
@@ -577,6 +640,7 @@
       if (fileClipboard.kind === 'audio') deletedTrackIndexes.add(Number(fileClipboard.trackIndex));
       persistFileState();
       showFolder(currentFolder, false);
+      if (apps.trash.window.classList.contains('open')) renderTrash();
       filesStatus.textContent = 'Cut to clipboard. Paste or Undo to restore it.';
     } else filesStatus.textContent = 'Copied to clipboard.';
   }
@@ -628,6 +692,7 @@
     else deletedTrackIndexes.add(Number(item.dataset.trackIndex));
     persistFileState();
     showFolder(currentFolder, false);
+    if (apps.trash.window.classList.contains('open')) renderTrash();
     filesStatus.textContent = 'Deleted. Use Undo to bring it back.';
   }
   document.getElementById('deleteBtn').addEventListener('click', deleteSelected);
@@ -756,11 +821,13 @@
     'files-file': [['Open', () => selectedFileItem()?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))], ['New Folder…', () => document.getElementById('newFolderBtn').click()], ['Close', () => closeApp('files')]],
     'files-edit': [['Undo', undoFileChange], ['Redo', redoFileChange], ['Cut', () => copyOrCut('cut')], ['Copy', () => copyOrCut('copy')], ['Paste', pasteClipboard], ['Delete', deleteSelected], ['Select all', () => document.querySelectorAll('.retro-photo:not([hidden]),.music-file:not([hidden])').forEach(item => item.classList.add('selected'))]],
     'files-view': [['Large icons', () => document.querySelectorAll('.gallery-grid,.music-grid').forEach(grid => grid.classList.remove('list-view'))], ['List', () => document.querySelectorAll('.gallery-grid,.music-grid').forEach(grid => grid.classList.add('list-view'))], ['Refresh', () => showFolder(currentFolder, false)]],
-    'files-tools': [['Sort by name', () => { [...galleryGrid.children].sort((a,b) => a.innerText.localeCompare(b.innerText)).forEach(item => galleryGrid.append(item)); }], ['Reset file locations', () => { localStorage.removeItem(storageKey); localStorage.removeItem('maybeline-deleted-photos'); localStorage.removeItem('maybeline-deleted-tracks'); location.reload(); }]],
+    'files-tools': [['Sort by name', () => { [...galleryGrid.children].sort((a,b) => a.innerText.localeCompare(b.innerText)).forEach(item => galleryGrid.append(item)); }], ['Reset file locations', () => { localStorage.removeItem(storageKey); localStorage.removeItem('maybeline-deleted-photos'); localStorage.removeItem('maybeline-deleted-tracks'); localStorage.removeItem('maybeline-purged-photos'); localStorage.removeItem('maybeline-purged-tracks'); location.reload(); }]],
     'files-help': [['Call for help…', openHelp], ['About Files', () => { filesStatus.textContent = 'FILES.EXE · Maybeline system archive'; }]]
   };
   document.getElementById('undoBtn').addEventListener('click', undoFileChange);
   document.getElementById('redoBtn').addEventListener('click', redoFileChange);
+  document.getElementById('browserHelpBtn').addEventListener('click', openHelp);
+  document.getElementById('filesHelpBtn').addEventListener('click', openHelp);
   document.querySelectorAll('[data-menu]').forEach(button => {
     button.addEventListener('click', event => {
       event.stopPropagation();
@@ -850,6 +917,8 @@
     localStorage.removeItem(storageKey);
     localStorage.removeItem('maybeline-deleted-photos');
     localStorage.removeItem('maybeline-deleted-tracks');
+    localStorage.removeItem('maybeline-purged-photos');
+    localStorage.removeItem('maybeline-purged-tracks');
     location.reload();
   });
 

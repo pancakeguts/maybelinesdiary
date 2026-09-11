@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#008080">
   <title>Maybeline's Diary</title>
   <meta name="description" content="Enter Maybeline's Diary — music, socials, and transmissions from the web.">
-  <link rel="stylesheet" href="styles.css?v=15">
+  <link rel="stylesheet" href="styles.css?v=16">
   <script async src="https://cse.google.com/cse.js?cx=27ef410f597474080"></script>
 </head>
 <body>
@@ -26,6 +26,11 @@
       <span class="icon-label">Files</span>
     </button>
 
+    <button class="desktop-icon trash-shortcut" id="trashShortcut" type="button" aria-label="Open Recycle Bin">
+      <span class="trash-desktop-icon" aria-hidden="true">♲</span>
+      <span class="icon-label">Recycle Bin</span>
+    </button>
+
     <section class="browser-window" id="browserWindow" role="dialog" aria-label="Maybeline Explorer" aria-hidden="true">
       <header class="titlebar" id="titlebar">
         <div class="titlebar-name"><span class="tiny-page" aria-hidden="true">M</span> Maybeline Explorer</div>
@@ -37,7 +42,7 @@
       </header>
 
       <nav class="menu-row app-menu" aria-label="Browser menu" data-app-menu="browser">
-        <button type="button" data-menu="browser-file">File</button><button type="button" data-menu="browser-edit">Edit</button><button type="button" data-menu="browser-view">View</button><button type="button" data-menu="browser-favorites">Favorites</button><button type="button" data-menu="browser-help">Help</button>
+        <button type="button" data-menu="browser-file">File</button><button type="button" data-menu="browser-edit">Edit</button><button type="button" data-menu="browser-view">View</button><button type="button" data-menu="browser-favorites">Favorites</button><button type="button" id="browserHelpBtn">Help</button>
       </nav>
 
       <div class="toolbar">
@@ -114,7 +119,7 @@
         </div>
       </header>
       <nav class="menu-row app-menu" aria-label="Files menu" data-app-menu="files">
-        <button type="button" data-menu="files-file">File</button><button type="button" data-menu="files-edit">Edit</button><button type="button" data-menu="files-view">View</button><button type="button" data-menu="files-tools">Tools</button><button type="button" data-menu="files-help">Help</button>
+        <button type="button" data-menu="files-file">File</button><button type="button" data-menu="files-edit">Edit</button><button type="button" data-menu="files-view">View</button><button type="button" data-menu="files-tools">Tools</button><button type="button" id="filesHelpBtn">Help</button>
       </nav>
       <div class="files-toolbar">
         <button type="button" id="filesBack">← <span>Back</span></button>
@@ -190,6 +195,13 @@
       <footer class="statusbar files-status"><span id="filesStatus">4 object(s)</span><span>My Computer</span></footer>
     </section>
 
+    <section class="browser-window trash-window" id="trashWindow" role="dialog" aria-label="Recycle Bin" aria-hidden="true">
+      <header class="titlebar" id="trashTitlebar"><div class="titlebar-name"><span aria-hidden="true">♲</span> Recycle Bin</div><div class="window-actions"><button type="button" data-action="minimize" data-window="trash" aria-label="Minimize Recycle Bin">_</button><button type="button" data-action="maximize" data-window="trash" aria-label="Maximize Recycle Bin">□</button><button type="button" data-action="close" data-window="trash" aria-label="Close Recycle Bin">×</button></div></header>
+      <nav class="menu-row"><button type="button" id="restoreTrashBtn">Restore</button><button type="button" id="emptyTrashBtn">Empty Recycle Bin</button></nav>
+      <div class="trash-content" id="trashContent"></div>
+      <footer class="statusbar"><span id="trashStatus">0 object(s)</span><span>Recycle Bin</span></footer>
+    </section>
+
     <section class="floating-viewer photo-viewer" id="photoViewer" role="dialog" aria-label="Picture Viewer" hidden>
       <div class="floating-titlebar photo-viewer-bar" id="photoViewerBar"><b id="photoViewerName">Picture Viewer</b><button type="button" id="closePhotoViewer" aria-label="Close picture">×</button></div>
       <div class="photo-viewer-canvas"><img id="photoViewerImage" src="" alt="Selected gallery picture"></div>
@@ -244,16 +256,17 @@
     <div class="context-menu" id="contextMenu" role="menu" hidden></div>
 
     <section class="floating-viewer help-window" id="helpWindow" role="dialog" aria-label="Help" hidden>
-      <div class="floating-titlebar help-titlebar" id="helpTitlebar"><b>HELP.EXE — CONNECTION OPEN</b><button type="button" id="closeHelp" aria-label="Close help">×</button></div>
-      <div class="help-terminal">
-        <p class="help-signal">INCOMING SIGNAL...</p>
-        <p>You pressed Help. Maybe it was just curiosity. Maybe it wasn’t.</p>
-        <p>If the screen feels too loud, you don’t have to hold it alone.</p>
+      <div class="floating-titlebar help-titlebar" id="helpTitlebar"><b>a note left open</b><button type="button" id="closeHelp" aria-label="Close help">×</button></div>
+      <div class="help-letter">
+        <p class="help-opening">for whoever found this—</p>
+        <p>Maybe you only clicked Help to see what would happen.</p>
+        <p>But if some part of you was actually asking: stay here for a moment. Whatever brought you to this screen is real, and it does not have to be carried in silence.</p>
+        <p>There are people awake right now whose entire job is to listen without judging you.</p>
         <label class="help-region">YOUR REGION<select id="helpRegion"><option value="WORLD">Worldwide</option><option value="AU">Australia</option><option value="US">United States</option><option value="CA">Canada</option><option value="GB">United Kingdom & Ireland</option></select></label>
         <div class="help-contact"><span id="helpContactName">WORLDWIDE SUPPORT</span><div id="helpContactLinks"></div></div>
         <p class="help-emergency">If life is in immediate danger, contact your local emergency services now.</p>
         <a class="help-chat" href="https://findahelpline.com/" target="_blank" rel="noopener noreferrer">FIND A VERIFIED HELPLINE ANYWHERE</a>
-        <p class="help-footer">you are still connected.</p>
+        <p class="help-footer">please remain here. the page is still open.</p>
       </div>
     </section>
 
@@ -262,6 +275,7 @@
       <div class="task-divider"></div>
       <button class="task-window" id="taskWindow" type="button" hidden><span class="tiny-page">M</span> Maybeline Explorer</button>
       <button class="task-window" id="taskFiles" type="button" hidden><span class="tiny-folder"></span> Files</button>
+      <button class="task-window" id="taskTrash" type="button" hidden><span>♲</span> Recycle Bin</button>
       <div class="tray-tools">
         <button type="button" id="weatherBtn" aria-label="Weather"><span id="weatherIcon">☁</span><b id="weatherTemp">--°</b></button>
         <button type="button" id="brightnessBtn" aria-label="Screen brightness">☀</button>
@@ -282,6 +296,6 @@
       <button type="button" id="restartBtn">restart maybeline</button>
     </div>
   </main>
-  <script src="app.js?v=15"></script>
+  <script src="app.js?v=16"></script>
 </body>
 </html>
