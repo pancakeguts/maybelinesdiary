@@ -195,20 +195,46 @@
   const fileList = document.getElementById('fileList');
   const folderEmpty = document.getElementById('folderEmpty');
   const retroGallery = document.getElementById('retroGallery');
+  const galleryNote = document.getElementById('galleryNote');
   const photoViewer = document.getElementById('photoViewer');
   const photoViewerImage = document.getElementById('photoViewerImage');
   const photoViewerName = document.getElementById('photoViewerName');
   const filesStatus = document.getElementById('filesStatus');
+  const photos = [...document.querySelectorAll('.retro-photo')];
+  const storageKey = 'maybeline-file-locations-v1';
+  const allowedFolders = {
+    image: ['Pictures', 'sick kvnt', 'Downloads', 'Archive'],
+    video: ['Videos', 'Downloads', 'Archive'],
+    audio: ['Music', 'Downloads', 'Archive'],
+    document: ['Documents', 'Downloads', 'Archive']
+  };
+  let currentFolder = 'Media';
+  let fileLocations = {};
+  try { fileLocations = JSON.parse(localStorage.getItem(storageKey)) || {}; } catch (error) { fileLocations = {}; }
+  photos.forEach((photo, index) => {
+    photo.dataset.id = photo.dataset.id || `photo-${String(index + 1).padStart(2, '0')}`;
+    photo.dataset.kind = photo.dataset.kind || 'image';
+    photo.draggable = true;
+    if (!fileLocations[photo.dataset.id]) fileLocations[photo.dataset.id] = 'sick kvnt';
+  });
+  function saveFileLocations() {
+    try { localStorage.setItem(storageKey, JSON.stringify(fileLocations)); } catch (error) { /* Storage can be disabled. */ }
+  }
+  saveFileLocations();
+
   function showFolder(folder) {
+    currentFolder = folder;
     folderAddress.textContent = 'C:\\Maybeline\\' + folder;
     document.querySelectorAll('.side-location').forEach(button => button.classList.toggle('active', button.dataset.folder === folder));
     const isHome = folder === 'Media';
-    const isGallery = folder === 'sick kvnt';
+    const visiblePhotos = photos.filter(photo => fileLocations[photo.dataset.id] === folder);
+    photos.forEach(photo => { photo.hidden = !visiblePhotos.includes(photo); });
     fileList.hidden = !isHome;
-    retroGallery.hidden = !isGallery;
-    folderEmpty.hidden = isHome || isGallery;
+    retroGallery.hidden = isHome || visiblePhotos.length === 0;
+    folderEmpty.hidden = isHome || visiblePhotos.length > 0;
     photoViewer.hidden = true;
-    filesStatus.textContent = isHome ? '5 object(s)' : isGallery ? '15 picture(s)' : '0 object(s)';
+    galleryNote.textContent = `${visiblePhotos.length} picture(s) — double-click to open or drag to a folder`;
+    filesStatus.textContent = isHome ? '5 object(s)' : `${visiblePhotos.length} object(s)`;
   }
   document.querySelectorAll('.side-location').forEach(button => button.addEventListener('click', () => showFolder(button.dataset.folder)));
   document.querySelectorAll('.file-row').forEach(row => {
@@ -222,7 +248,7 @@
   document.getElementById('newFolderBtn').addEventListener('click', () => {
     filesStatus.textContent = 'New folders will be available when media is added.';
   });
-  document.querySelectorAll('.retro-photo').forEach(photo => {
+  photos.forEach(photo => {
     const openPhoto = () => {
       photoViewerImage.src = photo.dataset.full;
       photoViewerName.textContent = photo.querySelector('b').textContent + ' - Picture Viewer';
@@ -238,10 +264,48 @@
     photo.addEventListener('keydown', event => {
       if (event.key === 'Enter') openPhoto();
     });
+    photo.addEventListener('dragstart', event => {
+      event.dataTransfer.setData('text/plain', photo.dataset.id);
+      event.dataTransfer.effectAllowed = 'move';
+      photo.classList.add('dragging');
+      document.querySelectorAll('.side-location').forEach(button => {
+        button.classList.toggle('drag-allowed', (allowedFolders[photo.dataset.kind] || []).includes(button.dataset.folder));
+      });
+    });
+    photo.addEventListener('dragend', () => {
+      photo.classList.remove('dragging');
+      document.querySelectorAll('.side-location').forEach(button => button.classList.remove('drag-allowed', 'drag-over'));
+    });
+  });
+  document.querySelectorAll('.side-location').forEach(button => {
+    button.addEventListener('dragover', event => {
+      const photo = photos.find(item => item.dataset.id === event.dataTransfer.getData('text/plain')) || document.querySelector('.retro-photo.dragging');
+      if (photo && (allowedFolders[photo.dataset.kind] || []).includes(button.dataset.folder)) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        button.classList.add('drag-over');
+      }
+    });
+    button.addEventListener('dragleave', () => button.classList.remove('drag-over'));
+    button.addEventListener('drop', event => {
+      event.preventDefault();
+      const id = event.dataTransfer.getData('text/plain');
+      const photo = photos.find(item => item.dataset.id === id);
+      const targetFolder = button.dataset.folder;
+      document.querySelectorAll('.side-location').forEach(item => item.classList.remove('drag-allowed', 'drag-over'));
+      if (!photo || !(allowedFolders[photo.dataset.kind] || []).includes(targetFolder)) {
+        filesStatus.textContent = `${targetFolder} does not accept that file type.`;
+        return;
+      }
+      fileLocations[id] = targetFolder;
+      saveFileLocations();
+      showFolder(targetFolder);
+      filesStatus.textContent = `${photo.querySelector('b').textContent} moved to ${targetFolder}.`;
+    });
   });
   document.getElementById('closePhotoViewer').addEventListener('click', () => {
     photoViewer.hidden = true;
-    filesStatus.textContent = '15 picture(s)';
+    filesStatus.textContent = `${photos.filter(photo => fileLocations[photo.dataset.id] === currentFolder).length} picture(s)`;
   });
 
   startBtn.addEventListener('click', event => {

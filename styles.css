@@ -300,6 +300,7 @@ button:focus-visible, a:focus-visible { outline: 2px dotted #000; outline-offset
 .list-folder { position: relative; width: 22px; height: 15px; flex: 0 0 22px; border: 1px solid #876900; background: #ffd43d; }
 .list-folder::before { content: ""; position: absolute; left: 1px; top: -5px; width: 9px; height: 5px; border: 1px solid #876900; border-bottom: 0; background: #ffd43d; }
 .folder-empty { display: grid; justify-items: center; align-content: center; min-height: 300px; color: #666; }
+.folder-empty[hidden] { display: none; }
 .large-folder { position: relative; width: 72px; height: 48px; border: 3px outset #ffe56d; background: #f5c928; filter: grayscale(.15); }
 .large-folder::before { content: ""; position: absolute; left: 3px; top: -16px; width: 31px; height: 16px; border: 3px outset #ffe56d; border-bottom: 0; background: #eebf1d; }
 .folder-empty p { margin: 18px 0 2px; color: #222; font-weight: bold; }
@@ -313,6 +314,9 @@ button:focus-visible, a:focus-visible { outline: 2px dotted #000; outline-offset
 .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(112px,1fr)); gap: 10px 7px; align-items: start; }
 .retro-photo { min-width: 0; padding: 4px; border: 1px solid transparent; background: transparent; color: #000; text-align: center; }
 .retro-photo:hover,.retro-photo.selected { border: 1px dotted #000; background: #d9e7ff; }
+.retro-photo.dragging { opacity: .45; }
+.side-location.drag-allowed { box-shadow: inset 0 0 0 2px #00a000; }
+.side-location.drag-over { color: #fff; background: #008000; outline: 2px dotted #fff; outline-offset: -4px; }
 .retro-photo > span {
   position: relative; display: block; width: 100%; aspect-ratio: 1; overflow: hidden;
   padding: 4px; border: 2px outset #fff; background: #c0c0c0;
