@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#008080">
   <title>Maybeline's Diary</title>
   <meta name="description" content="Enter Maybeline's Diary — music, socials, and transmissions from the web.">
-  <link rel="stylesheet" href="styles.css?v=5">
+  <link rel="stylesheet" href="styles.css?v=6">
   <script async src="https://cse.google.com/cse.js?cx=27ef410f597474080"></script>
 </head>
 <body>
@@ -178,13 +178,43 @@
               <button class="retro-photo" type="button" data-full="photo-15.png"><span><img src="photo-15.png" alt="Gallery photo 15" loading="lazy"></span><b>IMG_015.PNG</b></button>
             </div>
           </div>
-          <div class="photo-viewer" id="photoViewer" hidden>
-            <div class="photo-viewer-bar"><b id="photoViewerName">Picture Viewer</b><button type="button" id="closePhotoViewer" aria-label="Close picture">×</button></div>
-            <div class="photo-viewer-canvas"><img id="photoViewerImage" src="" alt="Selected gallery picture"></div>
+          <div class="music-library" id="musicLibrary" hidden>
+            <div class="gallery-note" id="musicNote">Music — double-click a track to play</div>
+            <div class="music-grid" id="musicGrid"></div>
           </div>
         </div>
       </div>
       <footer class="statusbar files-status"><span id="filesStatus">4 object(s)</span><span>My Computer</span></footer>
+    </section>
+
+    <section class="floating-viewer photo-viewer" id="photoViewer" role="dialog" aria-label="Picture Viewer" hidden>
+      <div class="floating-titlebar photo-viewer-bar" id="photoViewerBar"><b id="photoViewerName">Picture Viewer</b><button type="button" id="closePhotoViewer" aria-label="Close picture">×</button></div>
+      <div class="photo-viewer-canvas"><img id="photoViewerImage" src="" alt="Selected gallery picture"></div>
+    </section>
+
+    <section class="floating-viewer media-player" id="mediaPlayer" role="dialog" aria-label="Maybeline DVD Player" hidden>
+      <div class="floating-titlebar media-player-title" id="mediaPlayerBar">
+        <b>Maybeline DVD Player</b><button type="button" id="closeMediaPlayer" aria-label="Close player">×</button>
+      </div>
+      <div class="player-screen">
+        <span class="screen-disc" aria-hidden="true">♪</span>
+        <strong id="playerTrackName">NO DISC</strong>
+        <small id="playerEffectLabel">STEREO</small>
+      </div>
+      <input class="player-seek" id="playerSeek" type="range" min="0" max="1000" value="0" aria-label="Track position">
+      <div class="player-time"><span id="playerCurrent">0:00</span><span id="playerDuration">0:00</span></div>
+      <div class="player-buttons" aria-label="Playback controls">
+        <button type="button" id="playerPrevious" aria-label="Previous track">|◀</button>
+        <button type="button" id="playerPlay" aria-label="Play or pause">▶</button>
+        <button type="button" id="playerStop" aria-label="Stop">■</button>
+        <button type="button" id="playerNext" aria-label="Next track">▶|</button>
+      </div>
+      <div class="player-effects">
+        <button type="button" id="muffleEffect" aria-pressed="false">MUFFLE</button>
+        <button type="button" id="distortEffect" aria-pressed="false">DISTORT</button>
+      </div>
+      <label class="player-volume">VOL <input id="playerVolume" type="range" min="0" max="1" step="0.01" value="0.8"></label>
+      <audio id="audioElement" preload="metadata"></audio>
     </section>
 
     <div class="start-menu" id="startMenu" aria-hidden="true">
@@ -210,6 +240,6 @@
       <button type="button" id="restartBtn">restart maybeline</button>
     </div>
   </main>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

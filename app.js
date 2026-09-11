@@ -138,6 +138,37 @@
     bindDrag(name);
   });
 
+  function makeFloatingDraggable(panel, handle) {
+    let dragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+    handle.addEventListener('pointerdown', event => {
+      if (event.target.closest('button')) return;
+      dragging = true;
+      topZ += 1;
+      panel.style.zIndex = topZ + 30;
+      const rect = panel.getBoundingClientRect();
+      offsetX = event.clientX - rect.left;
+      offsetY = event.clientY - rect.top;
+      panel.style.transform = 'none';
+      panel.style.left = rect.left + 'px';
+      panel.style.top = rect.top + 'px';
+      handle.setPointerCapture(event.pointerId);
+    });
+    handle.addEventListener('pointermove', event => {
+      if (!dragging) return;
+      const maxX = Math.max(0, innerWidth - panel.offsetWidth);
+      const maxY = Math.max(0, innerHeight - 40 - panel.offsetHeight);
+      panel.style.left = Math.max(0, Math.min(maxX, event.clientX - offsetX)) + 'px';
+      panel.style.top = Math.max(0, Math.min(maxY, event.clientY - offsetY)) + 'px';
+    });
+    handle.addEventListener('pointerup', () => { dragging = false; });
+    panel.addEventListener('pointerdown', () => {
+      topZ += 1;
+      panel.style.zIndex = topZ + 30;
+    });
+  }
+
   document.getElementById('closeBtn').addEventListener('click', () => closeApp('browser'));
   document.getElementById('minimizeBtn').addEventListener('click', () => minimizeApp('browser'));
   document.getElementById('maximizeBtn').addEventListener('click', () => toggleMaximize('browser'));
@@ -196,10 +227,36 @@
   const folderEmpty = document.getElementById('folderEmpty');
   const retroGallery = document.getElementById('retroGallery');
   const galleryNote = document.getElementById('galleryNote');
+  const musicLibrary = document.getElementById('musicLibrary');
+  const musicGrid = document.getElementById('musicGrid');
+  const musicNote = document.getElementById('musicNote');
   const photoViewer = document.getElementById('photoViewer');
   const photoViewerImage = document.getElementById('photoViewerImage');
   const photoViewerName = document.getElementById('photoViewerName');
   const filesStatus = document.getElementById('filesStatus');
+  const mediaPlayer = document.getElementById('mediaPlayer');
+  const audioElement = document.getElementById('audioElement');
+  const playerTrackName = document.getElementById('playerTrackName');
+  const playerEffectLabel = document.getElementById('playerEffectLabel');
+  const playerSeek = document.getElementById('playerSeek');
+  const playerPlay = document.getElementById('playerPlay');
+  const playerCurrent = document.getElementById('playerCurrent');
+  const playerDuration = document.getElementById('playerDuration');
+  const muffleEffect = document.getElementById('muffleEffect');
+  const distortEffect = document.getElementById('distortEffect');
+  // Audio files are added here when Maybeline uploads them.
+  const audioTracks = [
+    {
+      title: 'the way i act makes me hurl (prod. me)',
+      src: 'the-way-i-act-makes-me-hurl-prod-me.mp3'
+    }
+  ];
+  let currentTrackIndex = -1;
+  let audioContext;
+  let audioSource;
+  let lowpassFilter;
+  let distortionFilter;
+  let gainNode;
   const photos = [...document.querySelectorAll('.retro-photo')];
   const storageKey = 'maybeline-file-locations-v1';
   const allowedFolders = {
@@ -227,14 +284,17 @@
     folderAddress.textContent = 'C:\\Maybeline\\' + folder;
     document.querySelectorAll('.side-location').forEach(button => button.classList.toggle('active', button.dataset.folder === folder));
     const isHome = folder === 'Media';
+    const isMusic = folder === 'Music';
     const visiblePhotos = photos.filter(photo => fileLocations[photo.dataset.id] === folder);
     photos.forEach(photo => { photo.hidden = !visiblePhotos.includes(photo); });
     fileList.hidden = !isHome;
-    retroGallery.hidden = isHome || visiblePhotos.length === 0;
-    folderEmpty.hidden = isHome || visiblePhotos.length > 0;
+    retroGallery.hidden = isHome || isMusic || visiblePhotos.length === 0;
+    musicLibrary.hidden = !isMusic || audioTracks.length === 0;
+    folderEmpty.hidden = isHome || visiblePhotos.length > 0 || (isMusic && audioTracks.length > 0);
     photoViewer.hidden = true;
     galleryNote.textContent = `${visiblePhotos.length} picture(s) — double-click to open or drag to a folder`;
-    filesStatus.textContent = isHome ? '5 object(s)' : `${visiblePhotos.length} object(s)`;
+    const count = isMusic ? audioTracks.length : visiblePhotos.length;
+    filesStatus.textContent = isHome ? '5 object(s)' : `${count} object(s)`;
   }
   document.querySelectorAll('.side-location').forEach(button => button.addEventListener('click', () => showFolder(button.dataset.folder)));
   document.querySelectorAll('.file-row').forEach(row => {
@@ -276,6 +336,110 @@
       photo.classList.remove('dragging');
       document.querySelectorAll('.side-location').forEach(button => button.classList.remove('drag-allowed', 'drag-over'));
     });
+  });
+  makeFloatingDraggable(photoViewer, document.getElementById('photoViewerBar'));
+
+  function formatTime(seconds) {
+    if (!Number.isFinite(seconds)) return '0:00';
+    return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+  }
+  function distortionCurve(amount = 55) {
+    const samples = 44100;
+    const curve = new Float32Array(samples);
+    for (let i = 0; i < samples; i += 1) {
+      const x = (i * 2) / samples - 1;
+      curve[i] = ((3 + amount) * x * 20 * Math.PI / 180) / (Math.PI + amount * Math.abs(x));
+    }
+    return curve;
+  }
+  function setupAudioEffects() {
+    if (audioContext) return;
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioSource = audioContext.createMediaElementSource(audioElement);
+    lowpassFilter = audioContext.createBiquadFilter();
+    lowpassFilter.type = 'lowpass';
+    lowpassFilter.frequency.value = 22000;
+    distortionFilter = audioContext.createWaveShaper();
+    distortionFilter.oversample = '4x';
+    gainNode = audioContext.createGain();
+    gainNode.gain.value = Number(document.getElementById('playerVolume').value);
+    audioSource.connect(lowpassFilter).connect(distortionFilter).connect(gainNode).connect(audioContext.destination);
+  }
+  function updateEffectLabel() {
+    const effects = [];
+    if (muffleEffect.classList.contains('active')) effects.push('MUFFLED');
+    if (distortEffect.classList.contains('active')) effects.push('DISTORTED');
+    playerEffectLabel.textContent = effects.join(' + ') || 'STEREO';
+  }
+  async function togglePlayback() {
+    if (currentTrackIndex < 0) return;
+    setupAudioEffects();
+    await audioContext.resume();
+    if (audioElement.paused) await audioElement.play(); else audioElement.pause();
+  }
+  function loadTrack(index, autoplay = true) {
+    if (!audioTracks.length) return;
+    currentTrackIndex = (index + audioTracks.length) % audioTracks.length;
+    const track = audioTracks[currentTrackIndex];
+    audioElement.src = track.src;
+    playerTrackName.textContent = track.title;
+    mediaPlayer.hidden = false;
+    topZ += 1;
+    mediaPlayer.style.zIndex = topZ + 30;
+    if (autoplay) togglePlayback().catch(() => { playerPlay.textContent = '▶'; });
+  }
+  function renderMusicLibrary() {
+    musicGrid.replaceChildren();
+    audioTracks.forEach((track, index) => {
+      const button = document.createElement('button');
+      button.className = 'music-file';
+      button.type = 'button';
+      button.innerHTML = `<span class="media-file-icon" aria-hidden="true">♫</span><b></b>`;
+      button.querySelector('b').textContent = track.title;
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.music-file').forEach(item => item.classList.remove('selected'));
+        button.classList.add('selected');
+      });
+      button.addEventListener('dblclick', () => loadTrack(index));
+      button.addEventListener('keydown', event => { if (event.key === 'Enter') loadTrack(index); });
+      if (matchMedia('(pointer: coarse)').matches) button.addEventListener('click', () => loadTrack(index));
+      musicGrid.append(button);
+    });
+    musicNote.textContent = `${audioTracks.length} song(s) — double-click to play`;
+  }
+  renderMusicLibrary();
+  makeFloatingDraggable(mediaPlayer, document.getElementById('mediaPlayerBar'));
+  playerPlay.addEventListener('click', () => togglePlayback());
+  document.getElementById('playerStop').addEventListener('click', () => { audioElement.pause(); audioElement.currentTime = 0; });
+  document.getElementById('playerPrevious').addEventListener('click', () => loadTrack(currentTrackIndex - 1));
+  document.getElementById('playerNext').addEventListener('click', () => loadTrack(currentTrackIndex + 1));
+  document.getElementById('closeMediaPlayer').addEventListener('click', () => { audioElement.pause(); mediaPlayer.hidden = true; });
+  audioElement.addEventListener('play', () => { playerPlay.textContent = '❚❚'; });
+  audioElement.addEventListener('pause', () => { playerPlay.textContent = '▶'; });
+  audioElement.addEventListener('ended', () => loadTrack(currentTrackIndex + 1));
+  audioElement.addEventListener('loadedmetadata', () => { playerDuration.textContent = formatTime(audioElement.duration); });
+  audioElement.addEventListener('timeupdate', () => {
+    playerCurrent.textContent = formatTime(audioElement.currentTime);
+    playerSeek.value = audioElement.duration ? String((audioElement.currentTime / audioElement.duration) * 1000) : '0';
+  });
+  playerSeek.addEventListener('input', () => { if (audioElement.duration) audioElement.currentTime = (Number(playerSeek.value) / 1000) * audioElement.duration; });
+  document.getElementById('playerVolume').addEventListener('input', event => {
+    setupAudioEffects();
+    gainNode.gain.value = Number(event.target.value);
+  });
+  muffleEffect.addEventListener('click', () => {
+    setupAudioEffects();
+    muffleEffect.classList.toggle('active');
+    muffleEffect.setAttribute('aria-pressed', String(muffleEffect.classList.contains('active')));
+    lowpassFilter.frequency.value = muffleEffect.classList.contains('active') ? 850 : 22000;
+    updateEffectLabel();
+  });
+  distortEffect.addEventListener('click', () => {
+    setupAudioEffects();
+    distortEffect.classList.toggle('active');
+    distortEffect.setAttribute('aria-pressed', String(distortEffect.classList.contains('active')));
+    distortionFilter.curve = distortEffect.classList.contains('active') ? distortionCurve() : null;
+    updateEffectLabel();
   });
   document.querySelectorAll('.side-location').forEach(button => {
     button.addEventListener('dragover', event => {
