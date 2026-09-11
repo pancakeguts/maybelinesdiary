@@ -260,6 +260,7 @@
       </main>
       <footer class="statusbar"><span id="ventStatus">Ready</span><span id="ventUserStatus">Guest</span></footer>
       <dialog class="vent-dialog" id="ventComposer"><form method="dialog" id="ventPostForm"><div class="vent-dialog-title">New discussion</div><label>Board<select name="category" required></select></label><label>Subject<input name="title" minlength="3" maxlength="120" required></label><label>Message<textarea name="body" rows="9" maxlength="10000" required></textarea></label><div class="vent-dialog-actions"><button type="button" id="ventComposerCancel">Cancel</button><button type="submit" value="default">Post</button></div></form></dialog>
+      <dialog class="vent-dialog vent-site-dialog" id="ventSiteDialog"><form method="dialog"><div class="vent-dialog-title" id="ventSiteDialogTitle">Vent</div><p id="ventSiteDialogMessage"></p><label id="ventSiteDialogField" hidden><span id="ventSiteDialogLabel">Message</span><textarea id="ventSiteDialogInput" rows="5" maxlength="5000"></textarea></label><div class="vent-dialog-actions"><button type="submit" value="cancel" id="ventSiteDialogCancel">Cancel</button><button type="submit" value="confirm" id="ventSiteDialogConfirm">OK</button></div></form></dialog>
     </section>
 
     <div class="start-menu" id="startMenu" aria-hidden="true">
@@ -319,6 +320,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="vent-config.js?v=24"></script>
   <script src="app.js?v=25"></script>
-  <script src="vent.js?v=27"></script>
+  <script src="vent.js?v=28"></script>
 </body>
 </html>
