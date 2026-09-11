@@ -411,7 +411,7 @@
   function updateEffectLabel() {
     const effects = effectKnobs.filter(knob => {
       const value = Number(knob.dataset.value);
-      return ['bass', 'treble', 'speed'].includes(knob.dataset.effect) ? value !== 50 : value > 0;
+      return ['bass', 'treble', 'speed', 'pitch'].includes(knob.dataset.effect) ? value !== 50 : value > 0;
     }).map(knob => knob.dataset.effect.toUpperCase());
     playerEffectLabel.textContent = effects.join(' + ') || 'STEREO';
   }
@@ -424,7 +424,16 @@
     if (effect === 'treble') trebleFilter.gain.value = (value - 50) * .3;
     if (effect === 'echo') delayWet.gain.value = amount * .7;
     if (effect === 'reverb') reverbWet.gain.value = amount * .75;
-    if (effect === 'speed') audioElement.playbackRate = .5 + amount;
+    if (effect === 'speed' || effect === 'pitch') {
+      const speedValue = Number(document.querySelector('[data-effect="speed"]').dataset.value);
+      const pitchValue = Number(document.querySelector('[data-effect="pitch"]').dataset.value);
+      const speed = .5 + speedValue / 100;
+      const semitones = (pitchValue - 50) * .24;
+      audioElement.preservesPitch = false;
+      audioElement.webkitPreservesPitch = false;
+      audioElement.playbackRate = speed * Math.pow(2, semitones / 12);
+      document.querySelector('[data-effect="pitch"]').setAttribute('aria-valuetext', `${semitones >= 0 ? '+' : ''}${semitones.toFixed(1)} semitones`);
+    }
     updateEffectLabel();
   }
   function setKnobValue(knob, value) {
@@ -432,7 +441,7 @@
     knob.dataset.value = String(next);
     knob.setAttribute('aria-valuenow', String(next));
     knob.style.setProperty('--turn', `${-135 + next * 2.7}deg`);
-    knob.classList.toggle('active', ['bass', 'treble', 'speed'].includes(knob.dataset.effect) ? next !== 50 : next > 0);
+    knob.classList.toggle('active', ['bass', 'treble', 'speed', 'pitch'].includes(knob.dataset.effect) ? next !== 50 : next > 0);
     applyEffect(knob.dataset.effect, next);
   }
   async function togglePlayback() {
