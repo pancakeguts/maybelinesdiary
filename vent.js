@@ -5,7 +5,9 @@
   let profile = null;
   let categories = [];
   let currentView = { type: 'home' };
-  let unread = (() => { try { return { forum: 0, friends: 0, messages: 0, ...JSON.parse(localStorage.getItem('vent-unread-sections') || '{}') }; } catch (_) { return { forum: 0, friends: 0, messages: 0 }; } })();
+  let unread = (() => { try { return { forum: 0, profile: 0, friends: 0, messages: 0, moderation: 0, ...JSON.parse(localStorage.getItem('vent-unread-sections') || '{}') }; } catch (_) { return { forum: 0, profile: 0, friends: 0, messages: 0, moderation: 0 }; } })();
+  const seenEvents = new Set();
+  let notificationPoll = null;
   const content = () => document.getElementById('ventForum');
   const status = message => { document.getElementById('ventStatus').textContent = message; };
   const esc = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
@@ -59,13 +61,13 @@
   function updateUnread(section = null, change = 0) {
     if (section) unread[section] = Math.max(0, (unread[section] || 0) + change);
     localStorage.setItem('vent-unread-sections', JSON.stringify(unread));
-    const total = unread.forum + unread.friends + unread.messages;
+    const total = unread.forum + unread.profile + unread.friends + unread.messages + unread.moderation;
     ['ventDesktopBadge', 'ventTaskBadge'].forEach(id => {
       const badge = document.getElementById(id);
       badge.textContent = total > 99 ? '99+' : String(total);
       badge.hidden = total === 0;
     });
-    [['ventForumBadge','forum'],['ventFriendsBadge','friends'],['ventMessagesBadge','messages']].forEach(([id,key]) => { const badge=document.getElementById(id); badge.textContent=unread[key]>99?'99+':String(unread[key]); badge.hidden=unread[key]===0; });
+    [['ventForumBadge','forum'],['ventProfileBadge','profile'],['ventFriendsBadge','friends'],['ventMessagesBadge','messages'],['ventModerationBadge','moderation']].forEach(([id,key]) => { const badge=document.getElementById(id); badge.textContent=unread[key]>99?'99+':String(unread[key]); badge.hidden=unread[key]===0; });
   }
 
   function clearUnread(section) { if (!section) return; unread[section] = 0; updateUnread(); }
@@ -101,15 +103,35 @@
     return result.data?.username || 'Someone';
   }
 
+  function eventKey(table, row) {
+    if (table === 'friendships') return `${table}:${row.id}:${row.status}:${row.updated_at}`;
+    if (table === 'likes') return `${table}:${row.user_id}:${row.post_id}`;
+    return `${table}:${row.id}`;
+  }
+
+  function rememberEvent(table, row) {
+    const key = eventKey(table, row);
+    if (seenEvents.has(key)) return false;
+    seenEvents.add(key);
+    if (seenEvents.size > 1200) seenEvents.delete(seenEvents.values().next().value);
+    return true;
+  }
+
   async function handleLiveEvent(table, payload) {
     const row = payload.new || {};
+    if (!rememberEvent(table, row)) return;
     if (table === 'posts' && payload.eventType === 'INSERT' && row.author_id !== session?.user.id) {
       const username = await notificationUsername(row.author_id);
       showVentNotification('forum', 'New post', `${username} posted “${row.title || 'a new discussion'}”.`, () => renderThread(row.id));
     }
     if (table === 'replies' && payload.eventType === 'INSERT' && row.author_id !== session?.user.id) {
       const username = await notificationUsername(row.author_id);
-      showVentNotification('forum', 'New reply', `${username} added a reply.`, () => renderThread(row.post_id));
+      let personal = false;
+      if (session) {
+        const post = await db.from('posts').select('author_id').eq('id', row.post_id).maybeSingle();
+        personal = post.data?.author_id === session.user.id;
+      }
+      showVentNotification(personal ? 'profile' : 'forum', personal ? 'New reply to your post' : 'New reply', `${username} added a reply.`, () => renderThread(row.post_id));
     }
     if (table === 'friendships' && session && payload.eventType === 'INSERT' && row.addressee_id === session.user.id) {
       const username = await notificationUsername(row.requester_id);
@@ -125,6 +147,55 @@
       showVentNotification('messages', 'New message', `${username}: ${preview}`, () => renderConversation(row.sender_id));
       if (currentView.type === 'conversation' && currentView.userId === row.sender_id) renderConversation(row.sender_id);
     }
+    if (table === 'likes' && session && payload.eventType === 'INSERT' && row.user_id !== session.user.id) {
+      const postResult = await db.from('posts').select('author_id,title').eq('id', row.post_id).maybeSingle();
+      if (postResult.data?.author_id === session.user.id) {
+        const username = await notificationUsername(row.user_id);
+        showVentNotification('profile', 'New like', `${username} liked “${postResult.data.title}”.`, () => renderThread(row.post_id));
+      }
+    }
+    if (table === 'reports' && staff() && payload.eventType === 'INSERT' && row.reporter_id !== session?.user.id) {
+      showVentNotification('moderation', 'New report', 'A new report needs moderator review.', renderModeration);
+    }
+  }
+
+  async function fetchNotificationRows() {
+    const publicRequests = [
+      db.from('posts').select('id,author_id,title,created_at').order('created_at',{ascending:false}).limit(50),
+      db.from('replies').select('id,post_id,author_id,created_at').order('created_at',{ascending:false}).limit(50),
+      db.from('likes').select('user_id,post_id,created_at').order('created_at',{ascending:false}).limit(50)
+    ];
+    const privateRequests = session ? [
+      db.from('friendships').select('id,requester_id,addressee_id,status,updated_at').order('updated_at',{ascending:false}).limit(50),
+      db.from('messages').select('id,sender_id,recipient_id,body,created_at').order('created_at',{ascending:false}).limit(50)
+    ] : [];
+    if (staff()) privateRequests.push(db.from('reports').select('id,reporter_id,created_at').order('created_at',{ascending:false}).limit(50));
+    const results = await Promise.all([...publicRequests,...privateRequests]);
+    const tables = ['posts','replies','likes',...(session?['friendships','messages']:[]),...(staff()?['reports']:[])];
+    return results.map((result,index)=>({table:tables[index],rows:result.data||[]}));
+  }
+
+  async function primeNotifications() {
+    const groups = await fetchNotificationRows();
+    groups.forEach(group => group.rows.forEach(row => rememberEvent(group.table,row)));
+    if (session) {
+      const friendships = groups.find(group => group.table === 'friendships')?.rows || [];
+      const pendingForMe = friendships.filter(row => row.status === 'pending' && row.addressee_id === session.user.id).length;
+      if (pendingForMe > unread.friends) { unread.friends = pendingForMe; updateUnread(); }
+    }
+  }
+
+  async function pollNotifications() {
+    try {
+      const groups = await fetchNotificationRows();
+      for (const group of groups) {
+        for (const row of [...group.rows].reverse()) {
+          if (seenEvents.has(eventKey(group.table,row))) continue;
+          const eventType = group.table === 'friendships' && row.status === 'accepted' ? 'UPDATE' : 'INSERT';
+          await handleLiveEvent(group.table,{eventType,new:row});
+        }
+      }
+    } catch (error) { console.warn('Vent notification check failed',error); }
   }
 
   function showError(error) {
@@ -289,14 +360,18 @@
     if(started)return; started=true; content().hidden=false;
     if(!window.supabase||!window.VENT_CONFIG)return showError('The forum connection did not load. Refresh the page.');
     db=window.supabase.createClient(window.VENT_CONFIG.url,window.VENT_CONFIG.publishableKey);
-    try{await loadIdentity();await loadCategories();document.getElementById('ventForum').hidden=false;await renderHome();}catch(error){showError(error);}
-    db.auth.onAuthStateChange(()=>setTimeout(async()=>{try{await loadIdentity();await refreshCurrent();}catch(error){showError(error);}},0));
+    try{await loadIdentity();await loadCategories();document.getElementById('ventForum').hidden=false;await renderHome();await primeNotifications();}catch(error){showError(error);}
+    db.auth.onAuthStateChange(()=>setTimeout(async()=>{try{await loadIdentity();await primeNotifications();await refreshCurrent();}catch(error){showError(error);}},0));
     db.channel('vent-live')
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'posts'},payload=>handleLiveEvent('posts',payload))
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'replies'},payload=>handleLiveEvent('replies',payload))
       .on('postgres_changes',{event:'*',schema:'public',table:'friendships'},payload=>handleLiveEvent('friendships',payload))
       .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},payload=>handleLiveEvent('messages',payload))
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'likes'},payload=>handleLiveEvent('likes',payload))
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'reports'},payload=>handleLiveEvent('reports',payload))
       .subscribe();
+    clearInterval(notificationPoll);
+    notificationPoll = setInterval(pollNotifications, 3000);
   }
 
   document.querySelectorAll('[data-auth-tab]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-auth-tab]').forEach(b=>b.classList.toggle('active',b===button));document.getElementById('ventLoginForm').hidden=button.dataset.authTab!=='login';document.getElementById('ventSignupForm').hidden=button.dataset.authTab!=='signup';authStatus(button.dataset.authTab==='login'?'Enter your username and password.':'Choose a unique username.');}));
@@ -306,10 +381,10 @@
   document.getElementById('ventComposerCancel').addEventListener('click',()=>document.getElementById('ventComposer').close());
   document.getElementById('ventHomeBtn').addEventListener('click',()=>{clearUnread('forum');renderHome();});
   document.getElementById('ventNewBtn').addEventListener('click',openComposer);
-  document.getElementById('ventProfileBtn').addEventListener('click',()=>renderProfile());
+  document.getElementById('ventProfileBtn').addEventListener('click',()=>{clearUnread('profile');renderProfile();});
   document.getElementById('ventFriendsBtn').addEventListener('click',()=>{clearUnread('friends');renderFriends();});
   document.getElementById('ventMessagesBtn').addEventListener('click',()=>{clearUnread('messages');renderMessages();});
-  document.getElementById('ventModerateBtn').addEventListener('click',renderModeration);
+  document.getElementById('ventModerateBtn').addEventListener('click',()=>{clearUnread('moderation');renderModeration();});
   document.getElementById('ventLogoutBtn').addEventListener('click',()=>db.auth.signOut());
   document.getElementById('ventSearchForm').addEventListener('submit',async event=>{event.preventDefault();const query=document.getElementById('ventSearchInput').value.trim();if(!query)return renderHome();status('Searching…');const result=await db.from('posts').select('id,title,created_at,profiles!posts_author_id_fkey(username),categories(name)').or(`title.ilike.%${query.replace(/[%_,()]/g,'')}%,body.ilike.%${query.replace(/[%_,()]/g,'')}%`).order('created_at',{ascending:false});if(result.error)return showError(result.error);content().innerHTML=`<div class="vent-board-head"><h2>Search: ${esc(query)}</h2><span>${result.data.length} result(s)</span></div><div class="vent-post-list">${result.data.map(post=>`<article class="vent-post-row"><div><button data-post="${post.id}">${esc(post.title)}</button><div class="vent-meta">${esc(post.categories?.name)} · by ${esc(post.profiles?.username)}</div></div><div></div><div class="vent-meta">${when(post.created_at)}</div></article>`).join('')||'<div class="vent-empty">Nothing found.</div>'}</div>`;content().querySelectorAll('[data-post]').forEach(b=>b.addEventListener('click',()=>renderThread(Number(b.dataset.post))));status('Search complete');});
   window.initVent=start;
