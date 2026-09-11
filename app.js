@@ -122,6 +122,63 @@
     app.window.addEventListener('pointerdown', () => focusApp(app));
   }
 
+  function bindShortcutDrag(name) {
+    const shortcut = apps[name].shortcut;
+    let pointerId = null;
+    let startX = 0;
+    let startY = 0;
+    let offsetX = 0;
+    let offsetY = 0;
+    let moved = false;
+    const saved = localStorage.getItem(`desktop-icon-${name}`);
+    if (saved) {
+      try {
+        const position = JSON.parse(saved);
+        shortcut.style.left = `${position.left}px`;
+        shortcut.style.top = `${position.top}px`;
+        shortcut.style.right = 'auto';
+        shortcut.style.bottom = 'auto';
+      } catch (_) { localStorage.removeItem(`desktop-icon-${name}`); }
+    }
+    shortcut.style.touchAction = 'none';
+    shortcut.addEventListener('pointerdown', event => {
+      if (event.button !== 0 || pointerId !== null) return;
+      const rect = shortcut.getBoundingClientRect();
+      pointerId = event.pointerId;
+      startX = event.clientX;
+      startY = event.clientY;
+      offsetX = event.clientX - rect.left;
+      offsetY = event.clientY - rect.top;
+      moved = false;
+      shortcut.setPointerCapture(pointerId);
+    });
+    shortcut.addEventListener('pointermove', event => {
+      if (event.pointerId !== pointerId) return;
+      if (!moved && Math.hypot(event.clientX - startX, event.clientY - startY) < 5) return;
+      moved = true;
+      const maxX = Math.max(0, innerWidth - shortcut.offsetWidth);
+      const maxY = Math.max(0, innerHeight - 42 - shortcut.offsetHeight);
+      shortcut.style.left = `${Math.max(0, Math.min(maxX, event.clientX - offsetX))}px`;
+      shortcut.style.top = `${Math.max(0, Math.min(maxY, event.clientY - offsetY))}px`;
+      shortcut.style.right = 'auto';
+      shortcut.style.bottom = 'auto';
+      shortcut.style.zIndex = '4';
+    });
+    shortcut.addEventListener('pointerup', event => {
+      if (event.pointerId !== pointerId) return;
+      if (moved) localStorage.setItem(`desktop-icon-${name}`, JSON.stringify({left:parseFloat(shortcut.style.left),top:parseFloat(shortcut.style.top)}));
+      pointerId = null;
+      shortcut.style.zIndex = '';
+    });
+    shortcut.addEventListener('pointercancel', () => { pointerId = null; moved = false; shortcut.style.zIndex = ''; });
+    shortcut.addEventListener('click', event => {
+      if (!moved) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      moved = false;
+    }, true);
+  }
+
   function bindDrag(name) {
     const app = apps[name];
     let dragging = false;
@@ -151,6 +208,7 @@
 
   Object.keys(apps).forEach(name => {
     bindShortcut(name);
+    bindShortcutDrag(name);
     bindDrag(name);
   });
 
