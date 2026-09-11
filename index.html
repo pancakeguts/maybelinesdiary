@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#008080">
   <title>Maybeline's Diary</title>
   <meta name="description" content="Enter Maybeline's Diary — music, socials, and transmissions from the web.">
-  <link rel="stylesheet" href="styles.css?v=17">
+  <link rel="stylesheet" href="styles.css?v=18">
   <script async src="https://cse.google.com/cse.js?cx=27ef410f597474080"></script>
 </head>
 <body>
@@ -257,18 +257,17 @@
     <div class="context-menu" id="contextMenu" role="menu" hidden></div>
 
     <section class="floating-viewer help-window" id="helpWindow" role="dialog" aria-label="Help" hidden>
-      <div class="floating-titlebar help-titlebar" id="helpTitlebar"><b>a note left open</b><button type="button" id="closeHelp" aria-label="Close help">×</button></div>
-      <div class="help-letter">
-        <p class="help-opening">for whoever found this—</p>
-        <p>Maybe you only clicked Help to see what would happen.</p>
-        <p>But if some part of you was actually asking: stay here for a moment. Whatever brought you to this screen is real, and it does not have to be carried in silence.</p>
-        <p>There are people awake right now whose entire job is to listen without judging you.</p>
-        <label class="help-region">YOUR REGION<select id="helpRegion"><option value="WORLD">Worldwide</option><option value="AU">Australia</option><option value="US">United States</option><option value="CA">Canada</option><option value="GB">United Kingdom & Ireland</option></select></label>
-        <div class="help-contact"><span id="helpContactName">WORLDWIDE SUPPORT</span><div id="helpContactLinks"></div></div>
-        <p class="help-emergency">If life is in immediate danger, contact your local emergency services now.</p>
-        <a class="help-chat" href="https://findahelpline.com/" target="_blank" rel="noopener noreferrer">FIND A VERIFIED HELPLINE ANYWHERE</a>
-        <p class="help-footer">please remain here. the page is still open.</p>
+      <div class="floating-titlebar help-titlebar" id="helpTitlebar"><b>▣ Maybeline Help Center</b><button type="button" id="closeHelp" aria-label="Close help">×</button></div>
+      <div class="help-menubar"><span>Help</span><span>Options</span><span>Stay Here</span></div>
+      <div class="help-workspace">
+        <aside class="help-sidebar"><details open><summary>Contents</summary><button type="button" data-help-jump="helpMessage">A message from Maybeline</button><button type="button" data-help-jump="helpNow">Things you can do now</button><button type="button" data-help-jump="helpFind">Find support nearby</button></details><div class="help-sidebar-note"><b>HELP.EXE</b><span>You do not need a perfect reason to be here.</span></div></aside>
+        <div class="help-main">
+          <section class="help-panel help-message" id="helpMessage"><div class="help-panel-title">A message left inside the computer</div><div class="help-panel-body"><p><b>hey. maybeline here.</b></p><p>You might have clicked Help by accident. You might not have. Either way, you are allowed to pause here without explaining yourself.</p><p>You do not have to turn your life into a problem for somebody to solve. Sometimes the next move is smaller: make noise, sit near somebody safe, message the person who gets you, walk outside, drink water, or let one song finish before deciding anything.</p><p class="help-signoff">stay for the next track. then the next minute.<br>— maybeline</p></div></section>
+          <section class="help-panel" id="helpNow"><div class="help-panel-title">Try one small thing</div><div class="help-actions"><button type="button" data-help-action="breathe">▸ Breathe with the screen for 30 seconds</button><button type="button" data-help-action="music">♫ Go back and play something</button><button type="button" data-help-action="message">✉ Copy a message to someone you trust</button><button type="button" data-help-action="stay">□ Keep this window open</button></div><div class="help-action-output" id="helpActionOutput">Choose anything that feels possible. Nothing here is compulsory.</div></section>
+          <section class="help-panel" id="helpFind"><div class="help-panel-title">Find something near you — optional</div><div class="help-panel-body"><p>If you want another person in the moment, that can be a friend, family member, community, peer line, counsellor, or emergency service. You choose.</p><label class="help-region" for="helpPlaceInput">Country or place</label><div class="help-place-search"><input id="helpPlaceInput" list="helpPlaceList" placeholder="Worldwide, Australia, Melbourne…" autocomplete="off"><datalist id="helpPlaceList"></datalist><button type="button" id="searchHelpPlace">Search</button></div><div class="help-contact"><span id="helpContactName">WORLDWIDE</span><div id="helpContactLinks"></div></div><p class="help-emergency">If you or someone else is in immediate danger, use the emergency number for where you are now.</p></div></section>
+        </div>
       </div>
+      <div class="help-statusbar"><span id="helpStatus">Ready</span><span>maybeline.net</span></div>
     </section>
 
     <footer class="taskbar">
@@ -297,6 +296,6 @@
       <button type="button" id="restartBtn">restart maybeline</button>
     </div>
   </main>
-  <script src="app.js?v=17"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>

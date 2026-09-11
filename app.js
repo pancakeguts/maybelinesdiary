@@ -827,38 +827,72 @@
 
   const dropdownMenu = document.getElementById('dropdownMenu');
   const helpWindow = document.getElementById('helpWindow');
-  const helpRegion = document.getElementById('helpRegion');
+  const helpPlaceInput = document.getElementById('helpPlaceInput');
+  const helpStatus = document.getElementById('helpStatus');
   const helpContacts = {
-    WORLD: { name: 'WORLDWIDE SUPPORT', links: [['SEARCH VERIFIED LOCAL SERVICES', 'https://findahelpline.com/']] },
+    WORLD: { name: 'WORLDWIDE', links: [['Browse verified support worldwide', 'https://findahelpline.com/']] },
     AU: { name: 'LIFELINE AUSTRALIA', links: [['CALL 13 11 14', 'tel:131114'], ['TEXT 0477 13 11 14', 'sms:0477131114'], ['OPEN 24/7 CHAT', 'https://www.lifeline.org.au/chat']] },
     US: { name: '988 SUICIDE & CRISIS LIFELINE — U.S.', links: [['CALL 988', 'tel:988'], ['TEXT 988', 'sms:988'], ['OPEN 988 LIFELINE', 'https://988lifeline.org/']] },
     CA: { name: '9-8-8 SUICIDE CRISIS HELPLINE — CANADA', links: [['CALL 9-8-8', 'tel:988'], ['TEXT 9-8-8', 'sms:988'], ['OPEN 9-8-8 CANADA', 'https://988.ca/']] },
-    GB: { name: 'SAMARITANS — UK & IRELAND', links: [['CALL 116 123', 'tel:116123'], ['OPEN SAMARITANS', 'https://www.samaritans.org/how-we-can-help/contact-samaritan/']] }
+    GB: { name: 'SAMARITANS — UNITED KINGDOM', links: [['CALL 116 123', 'tel:116123'], ['OPEN SAMARITANS', 'https://www.samaritans.org/how-we-can-help/contact-samaritan/']] },
+    IE: { name: 'SAMARITANS — IRELAND', links: [['CALL 116 123', 'tel:116123'], ['OPEN SAMARITANS', 'https://www.samaritans.org/how-we-can-help/contact-samaritan/']] },
+    NZ: { name: '1737 — NEW ZEALAND', links: [['CALL OR TEXT 1737', 'tel:1737'], ['OPEN 1737', 'https://1737.org.nz/']] }
   };
-  function renderHelpContact(region) {
-    const contact = helpContacts[region] || helpContacts.WORLD;
-    document.getElementById('helpContactName').textContent = contact.name;
+  const countryCodes = 'AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW'.split(' ');
+  const regionNames = typeof Intl.DisplayNames === 'function' ? new Intl.DisplayNames([navigator.language || 'en'], { type: 'region' }) : null;
+  const countries = countryCodes.map(code => ({ code, name: regionNames?.of(code) || code })).sort((a, b) => a.name.localeCompare(b.name));
+  const placeList = document.getElementById('helpPlaceList');
+  ['Worldwide', ...countries.map(country => country.name)].forEach(name => { const option = document.createElement('option'); option.value = name; placeList.append(option); });
+  function renderHelpContact(region = 'WORLD', placeName = '') {
+    const contact = helpContacts[region];
+    const displayPlace = placeName || countries.find(country => country.code === region)?.name || 'Worldwide';
+    document.getElementById('helpContactName').textContent = contact?.name || `OPTIONS NEAR ${displayPlace.toUpperCase()}`;
     const links = document.getElementById('helpContactLinks');
     links.replaceChildren();
-    contact.links.forEach(([label, href]) => {
+    const choices = contact?.links || [
+      [`Verified services for ${displayPlace}`, 'https://findahelpline.com/'],
+      [`Search local community support`, `https://www.google.com/search?q=${encodeURIComponent(`${displayPlace} community peer mental health support`)}`]
+    ];
+    choices.forEach(([label, href]) => {
       const link = document.createElement('a');
       link.textContent = label;
       link.href = href;
       if (href.startsWith('http')) { link.target = '_blank'; link.rel = 'noopener noreferrer'; }
       links.append(link);
     });
+    helpStatus.textContent = displayPlace === 'Worldwide' ? 'Showing worldwide options' : `Showing: ${displayPlace}`;
   }
   function detectHelpRegion() {
     const languageRegion = (navigator.language.split('-')[1] || '').toUpperCase();
-    if (helpContacts[languageRegion]) return languageRegion;
+    if (countryCodes.includes(languageRegion)) return languageRegion;
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
     if (zone.startsWith('Australia/')) return 'AU';
-    if (zone.startsWith('America/')) return 'WORLD';
     return 'WORLD';
   }
-  helpRegion.value = detectHelpRegion();
-  renderHelpContact(helpRegion.value);
-  helpRegion.addEventListener('change', () => renderHelpContact(helpRegion.value));
+  const detectedHelpRegion = detectHelpRegion();
+  helpPlaceInput.value = detectedHelpRegion === 'WORLD' ? 'Worldwide' : countries.find(country => country.code === detectedHelpRegion)?.name || 'Worldwide';
+  renderHelpContact(detectedHelpRegion, helpPlaceInput.value);
+  function searchHelpPlace() {
+    const query = helpPlaceInput.value.trim();
+    if (!query || query.toLowerCase() === 'worldwide') { helpPlaceInput.value = 'Worldwide'; renderHelpContact('WORLD', 'Worldwide'); return; }
+    const match = countries.find(country => country.name.toLowerCase() === query.toLowerCase() || country.code.toLowerCase() === query.toLowerCase());
+    renderHelpContact(match?.code || '', match?.name || query);
+  }
+  document.getElementById('searchHelpPlace').addEventListener('click', searchHelpPlace);
+  helpPlaceInput.addEventListener('keydown', event => { if (event.key === 'Enter') searchHelpPlace(); });
+  document.querySelectorAll('[data-help-jump]').forEach(button => button.addEventListener('click', () => { document.getElementById(button.dataset.helpJump).scrollIntoView({ behavior: 'smooth', block: 'start' }); helpStatus.textContent = button.textContent; }));
+  document.querySelectorAll('[data-help-action]').forEach(button => button.addEventListener('click', async () => {
+    const output = document.getElementById('helpActionOutput');
+    if (button.dataset.helpAction === 'breathe') {
+      let seconds = 30; output.textContent = `Breathe in slowly. ${seconds} seconds.`;
+      const timer = setInterval(() => { seconds -= 1; output.textContent = seconds > 0 ? `${seconds % 8 > 3 ? 'Breathe out slowly.' : 'Breathe in slowly.'} ${seconds} seconds.` : 'Done. You made it through that half-minute.'; if (seconds <= 0) clearInterval(timer); }, 1000);
+    } else if (button.dataset.helpAction === 'music') {
+      helpWindow.hidden = true; openApp('files'); showFolder('Music'); filesStatus.textContent = 'Pick a song. No rush.';
+    } else if (button.dataset.helpAction === 'message') {
+      const message = 'hey, i do not need you to fix anything. can you just stay with me for a bit?';
+      try { await navigator.clipboard.writeText(message); output.textContent = `Copied: “${message}”`; } catch (error) { output.textContent = message; }
+    } else output.textContent = 'This window will stay here. You can move it aside and come back whenever you want.';
+  }));
   function openHelp() {
     helpWindow.hidden = false;
     topZ += 1;
