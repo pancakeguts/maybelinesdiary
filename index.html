@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#008080">
   <title>Maybeline's Diary</title>
   <meta name="description" content="Enter Maybeline's Diary — music, socials, and transmissions from the web.">
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=8">
   <script async src="https://cse.google.com/cse.js?cx=27ef410f597474080"></script>
 </head>
 <body>
@@ -192,14 +192,18 @@
       <div class="photo-viewer-canvas"><img id="photoViewerImage" src="" alt="Selected gallery picture"></div>
     </section>
 
-    <section class="floating-viewer media-player" id="mediaPlayer" role="dialog" aria-label="Maybeline DVD Player" hidden>
+    <section class="floating-viewer media-player" id="mediaPlayer" role="dialog" aria-label="DVD Player" hidden>
       <div class="floating-titlebar media-player-title" id="mediaPlayerBar">
-        <b>Maybeline DVD Player</b><button type="button" id="closeMediaPlayer" aria-label="Close player">×</button>
+        <b>DVD Player</b><button type="button" id="closeMediaPlayer" aria-label="Close player">×</button>
       </div>
-      <div class="player-screen">
-        <span class="screen-disc" aria-hidden="true">♪</span>
-        <strong id="playerTrackName">NO DISC</strong>
-        <small id="playerEffectLabel">STEREO</small>
+      <div class="jukebox-shell">
+        <div class="jukebox-arch" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="player-screen">
+          <span class="screen-disc" aria-hidden="true">♪</span>
+          <strong id="playerTrackName">NO DISC</strong>
+          <small id="playerEffectLabel">STEREO</small>
+        </div>
+        <div class="jukebox-grille" aria-hidden="true"></div>
       </div>
       <input class="player-seek" id="playerSeek" type="range" min="0" max="1000" value="0" aria-label="Track position">
       <div class="player-time"><span id="playerCurrent">0:00</span><span id="playerDuration">0:00</span></div>
@@ -209,9 +213,14 @@
         <button type="button" id="playerStop" aria-label="Stop">■</button>
         <button type="button" id="playerNext" aria-label="Next track">▶|</button>
       </div>
-      <div class="player-effects">
-        <button type="button" id="muffleEffect" aria-pressed="false">MUFFLE</button>
-        <button type="button" id="distortEffect" aria-pressed="false">DISTORT</button>
+      <div class="effect-rack" aria-label="Audio effects">
+        <div class="effect-control"><button class="effect-knob" type="button" data-effect="muffle" data-value="0" aria-label="Muffle amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></button><span>MUFFLE</span></div>
+        <div class="effect-control"><button class="effect-knob" type="button" data-effect="distortion" data-value="0" aria-label="Distortion amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></button><span>DISTORT</span></div>
+        <div class="effect-control"><button class="effect-knob" type="button" data-effect="bass" data-value="50" aria-label="Bass amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><i></i></button><span>BASS</span></div>
+        <div class="effect-control"><button class="effect-knob" type="button" data-effect="treble" data-value="50" aria-label="Treble amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><i></i></button><span>TREBLE</span></div>
+        <div class="effect-control"><button class="effect-knob" type="button" data-effect="echo" data-value="0" aria-label="Echo amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></button><span>ECHO</span></div>
+        <div class="effect-control"><button class="effect-knob" type="button" data-effect="reverb" data-value="0" aria-label="Reverb amount" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></button><span>REVERB</span></div>
+        <div class="effect-control"><button class="effect-knob" type="button" data-effect="speed" data-value="50" aria-label="Playback speed" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"><i></i></button><span>SPEED</span></div>
       </div>
       <label class="player-volume">VOL <input id="playerVolume" type="range" min="0" max="1" step="0.01" value="0.8"></label>
       <audio id="audioElement" preload="metadata"></audio>
@@ -240,6 +249,6 @@
       <button type="button" id="restartBtn">restart maybeline</button>
     </div>
   </main>
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

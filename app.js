@@ -242,8 +242,7 @@
   const playerPlay = document.getElementById('playerPlay');
   const playerCurrent = document.getElementById('playerCurrent');
   const playerDuration = document.getElementById('playerDuration');
-  const muffleEffect = document.getElementById('muffleEffect');
-  const distortEffect = document.getElementById('distortEffect');
+  const effectKnobs = [...document.querySelectorAll('.effect-knob')];
   // Audio files are added here when Maybeline uploads them.
   const audioTracks = [
     {
@@ -256,6 +255,14 @@
   let audioSource;
   let lowpassFilter;
   let distortionFilter;
+  let bassFilter;
+  let trebleFilter;
+  let dryGain;
+  let delayNode;
+  let delayFeedback;
+  let delayWet;
+  let convolverNode;
+  let reverbWet;
   let gainNode;
   const photos = [...document.querySelectorAll('.retro-photo')];
   const storageKey = 'maybeline-file-locations-v1';
@@ -361,15 +368,64 @@
     lowpassFilter.frequency.value = 22000;
     distortionFilter = audioContext.createWaveShaper();
     distortionFilter.oversample = '4x';
+    bassFilter = audioContext.createBiquadFilter();
+    bassFilter.type = 'lowshelf';
+    bassFilter.frequency.value = 240;
+    trebleFilter = audioContext.createBiquadFilter();
+    trebleFilter.type = 'highshelf';
+    trebleFilter.frequency.value = 3200;
+    dryGain = audioContext.createGain();
+    delayNode = audioContext.createDelay(1.5);
+    delayNode.delayTime.value = .28;
+    delayFeedback = audioContext.createGain();
+    delayFeedback.gain.value = .32;
+    delayWet = audioContext.createGain();
+    delayWet.gain.value = 0;
+    convolverNode = audioContext.createConvolver();
+    const impulseLength = audioContext.sampleRate * 2;
+    const impulse = audioContext.createBuffer(2, impulseLength, audioContext.sampleRate);
+    for (let channel = 0; channel < 2; channel += 1) {
+      const data = impulse.getChannelData(channel);
+      for (let i = 0; i < impulseLength; i += 1) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / impulseLength, 2.6);
+    }
+    convolverNode.buffer = impulse;
+    reverbWet = audioContext.createGain();
+    reverbWet.gain.value = 0;
     gainNode = audioContext.createGain();
     gainNode.gain.value = Number(document.getElementById('playerVolume').value);
-    audioSource.connect(lowpassFilter).connect(distortionFilter).connect(gainNode).connect(audioContext.destination);
+    audioSource.connect(lowpassFilter).connect(bassFilter).connect(trebleFilter).connect(distortionFilter);
+    distortionFilter.connect(dryGain).connect(gainNode);
+    distortionFilter.connect(delayNode).connect(delayWet).connect(gainNode);
+    delayNode.connect(delayFeedback).connect(delayNode);
+    distortionFilter.connect(convolverNode).connect(reverbWet).connect(gainNode);
+    gainNode.connect(audioContext.destination);
   }
   function updateEffectLabel() {
-    const effects = [];
-    if (muffleEffect.classList.contains('active')) effects.push('MUFFLED');
-    if (distortEffect.classList.contains('active')) effects.push('DISTORTED');
+    const effects = effectKnobs.filter(knob => {
+      const value = Number(knob.dataset.value);
+      return ['bass', 'treble', 'speed'].includes(knob.dataset.effect) ? value !== 50 : value > 0;
+    }).map(knob => knob.dataset.effect.toUpperCase());
     playerEffectLabel.textContent = effects.join(' + ') || 'STEREO';
+  }
+  function applyEffect(effect, value) {
+    setupAudioEffects();
+    const amount = value / 100;
+    if (effect === 'muffle') lowpassFilter.frequency.value = 22000 - amount * 21400;
+    if (effect === 'distortion') distortionFilter.curve = value ? distortionCurve(value * 1.2) : null;
+    if (effect === 'bass') bassFilter.gain.value = (value - 50) * .3;
+    if (effect === 'treble') trebleFilter.gain.value = (value - 50) * .3;
+    if (effect === 'echo') delayWet.gain.value = amount * .7;
+    if (effect === 'reverb') reverbWet.gain.value = amount * .75;
+    if (effect === 'speed') audioElement.playbackRate = .5 + amount;
+    updateEffectLabel();
+  }
+  function setKnobValue(knob, value) {
+    const next = Math.max(0, Math.min(100, Math.round(value)));
+    knob.dataset.value = String(next);
+    knob.setAttribute('aria-valuenow', String(next));
+    knob.style.setProperty('--turn', `${-135 + next * 2.7}deg`);
+    knob.classList.toggle('active', ['bass', 'treble', 'speed'].includes(knob.dataset.effect) ? next !== 50 : next > 0);
+    applyEffect(knob.dataset.effect, next);
   }
   async function togglePlayback() {
     if (currentTrackIndex < 0) return;
@@ -427,19 +483,30 @@
     setupAudioEffects();
     gainNode.gain.value = Number(event.target.value);
   });
-  muffleEffect.addEventListener('click', () => {
-    setupAudioEffects();
-    muffleEffect.classList.toggle('active');
-    muffleEffect.setAttribute('aria-pressed', String(muffleEffect.classList.contains('active')));
-    lowpassFilter.frequency.value = muffleEffect.classList.contains('active') ? 850 : 22000;
-    updateEffectLabel();
-  });
-  distortEffect.addEventListener('click', () => {
-    setupAudioEffects();
-    distortEffect.classList.toggle('active');
-    distortEffect.setAttribute('aria-pressed', String(distortEffect.classList.contains('active')));
-    distortionFilter.curve = distortEffect.classList.contains('active') ? distortionCurve() : null;
-    updateEffectLabel();
+  effectKnobs.forEach(knob => {
+    let startY = 0;
+    let startValue = Number(knob.dataset.value);
+    knob.style.setProperty('--turn', `${-135 + startValue * 2.7}deg`);
+    knob.addEventListener('pointerdown', event => {
+      startY = event.clientY;
+      startValue = Number(knob.dataset.value);
+      knob.setPointerCapture(event.pointerId);
+    });
+    knob.addEventListener('pointermove', event => {
+      if (!knob.hasPointerCapture(event.pointerId)) return;
+      setKnobValue(knob, startValue + (startY - event.clientY));
+    });
+    knob.addEventListener('wheel', event => {
+      event.preventDefault();
+      setKnobValue(knob, Number(knob.dataset.value) + (event.deltaY < 0 ? 4 : -4));
+    }, { passive: false });
+    knob.addEventListener('keydown', event => {
+      if (!['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      if (event.key === 'Home') setKnobValue(knob, 0);
+      else if (event.key === 'End') setKnobValue(knob, 100);
+      else setKnobValue(knob, Number(knob.dataset.value) + (['ArrowUp', 'ArrowRight'].includes(event.key) ? 2 : -2));
+    });
   });
   document.querySelectorAll('.side-location').forEach(button => {
     button.addEventListener('dragover', event => {
