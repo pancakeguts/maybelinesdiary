@@ -97,9 +97,13 @@
     status(`${result.data.length} discussion(s)`);
   }
 
-  function messageBlock(item, kind, original = false) {
+  function messageBlock(item, kind, original = false, canReply = false) {
     const mine = session?.user.id === item.author_id;
-    return `<article class="vent-message"><aside class="vent-message-user"><button class="vent-user-link" data-profile="${item.author_id}">${esc(item.profiles?.username || 'unknown')}</button><div class="vent-meta">${esc(item.profiles?.role || 'member')}<br>${when(item.created_at)}</div></aside><div class="vent-message-body">${esc(item.body)}${item.is_edited ? '<div class="vent-meta">edited</div>' : ''}<footer>${original ? `<button class="vent-action" data-like="${item.id}">♥ Like (${item.likes?.[0]?.count || 0})</button>` : ''}${mine || staff() ? `<button class="vent-action" data-edit-${kind}="${item.id}">Edit</button><button class="vent-action" data-delete-${kind}="${item.id}">Delete</button>` : ''}<button class="vent-action" data-report-${kind}="${item.id}">Report</button>${original && staff() ? `<button class="vent-action" data-lock="${item.id}">${item.is_locked ? 'Unlock' : 'Lock'} thread</button>` : ''}</footer></div></article>`;
+    return `<article class="vent-message"><aside class="vent-message-user"><button class="vent-user-link" data-profile="${item.author_id}">${esc(item.profiles?.username || 'unknown')}</button><div class="vent-meta">${esc(item.profiles?.role || 'member')}<br>${when(item.created_at)}</div></aside><div class="vent-message-body">${esc(item.body)}${item.is_edited ? '<div class="vent-meta">edited</div>' : ''}<footer>${original ? `<button class="vent-action" data-like="${item.id}">♥ Like (${item.likes?.[0]?.count || 0})</button>` : ''}${canReply ? `<button class="vent-action" data-reply-to="${original ? '' : item.id}" data-reply-name="${esc(item.profiles?.username || 'unknown')}">Reply</button>` : ''}${mine || staff() ? `<button class="vent-action" data-edit-${kind}="${item.id}">Edit</button><button class="vent-action" data-delete-${kind}="${item.id}">Delete</button>` : ''}<button class="vent-action" data-report-${kind}="${item.id}">Report</button>${original && staff() ? `<button class="vent-action" data-lock="${item.id}">${item.is_locked ? 'Unlock' : 'Lock'} thread</button>` : ''}</footer></div></article>`;
+  }
+
+  function replyTree(replies, parentId = null, canReply = false) {
+    return replies.filter(reply => (reply.parent_reply_id ?? null) === parentId).map(reply => `<div class="vent-reply-node">${messageBlock(reply, 'reply', false, canReply)}${replyTree(replies, reply.id, canReply)}</div>`).join('');
   }
 
   async function renderThread(postId) {
@@ -112,10 +116,16 @@
     if (postResult.error) return showError(postResult.error);
     if (repliesResult.error) return showError(repliesResult.error);
     const post = postResult.data;
-    content().innerHTML = `<div class="vent-board-head"><div class="vent-breadcrumbs"><button data-home>Forum Index</button> » <button data-category="${post.category_id}">${esc(post.categories?.name)}</button></div><span>${post.is_locked ? 'Locked' : 'Open'}</span></div><div class="vent-thread-title">${esc(post.title)}</div>${messageBlock(post, 'post', true)}${repliesResult.data.map(reply => messageBlock(reply, 'reply')).join('')}${post.is_locked ? '<div class="vent-empty">This discussion is locked.</div>' : session ? '<form class="vent-reply-form" id="ventReplyForm"><b>Post a reply</b><textarea name="body" maxlength="5000" required></textarea><button class="vent-action" type="submit">Reply</button></form>' : '<div class="vent-empty">Log in above to reply.</div>'}`;
+    const canReply = Boolean(session && !post.is_locked);
+    content().innerHTML = `<div class="vent-board-head"><div class="vent-breadcrumbs"><button data-home>Forum Index</button> » <button data-category="${post.category_id}">Diary</button></div><span>${post.is_locked ? 'Locked' : 'Open'}</span></div><div class="vent-thread-title">${esc(post.title)}</div>${messageBlock(post, 'post', true, canReply)}<div class="vent-replies-tree">${replyTree(repliesResult.data, null, canReply)}</div>${post.is_locked ? '<div class="vent-empty">This discussion is locked.</div>' : session ? '<form class="vent-reply-form" id="ventReplyForm"><div class="vent-reply-heading"><b id="ventReplyHeading">Reply to the post</b><button class="vent-action" id="ventCancelReply" type="button" hidden>Cancel</button></div><textarea name="body" maxlength="5000" required></textarea><button class="vent-action" type="submit">Reply</button></form>' : '<div class="vent-empty">Log in above to reply.</div>'}`;
     content().querySelector('[data-home]').addEventListener('click', renderHome);
     content().querySelector('[data-category]').addEventListener('click', () => renderCategory(post.category_id));
-    content().querySelector('#ventReplyForm')?.addEventListener('submit', async event => { event.preventDefault(); const body = new FormData(event.currentTarget).get('body').trim(); const result = await db.from('replies').insert({post_id:postId,author_id:session.user.id,body}); if (result.error) return alert(result.error.message); await db.from('posts').update({updated_at:new Date().toISOString()}).eq('id',postId); renderThread(postId); });
+    const replyForm = content().querySelector('#ventReplyForm');
+    let replyParentId = null;
+    const resetReplyTarget = () => { replyParentId = null; if (!replyForm) return; replyForm.querySelector('#ventReplyHeading').textContent = 'Reply to the post'; replyForm.querySelector('#ventCancelReply').hidden = true; };
+    content().querySelectorAll('[data-reply-to]').forEach(button => button.addEventListener('click', () => { if (!replyForm) return; replyParentId = button.dataset.replyTo ? Number(button.dataset.replyTo) : null; replyForm.querySelector('#ventReplyHeading').textContent = `Replying to ${button.dataset.replyName}`; replyForm.querySelector('#ventCancelReply').hidden = false; replyForm.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => replyForm.querySelector('textarea').focus(), 250); }));
+    replyForm?.querySelector('#ventCancelReply').addEventListener('click', resetReplyTarget);
+    replyForm?.addEventListener('submit', async event => { event.preventDefault(); const body = new FormData(event.currentTarget).get('body').trim(); const result = await db.from('replies').insert({post_id:postId,author_id:session.user.id,body,parent_reply_id:replyParentId}); if (result.error) return alert(result.error.message); await db.from('posts').update({updated_at:new Date().toISOString()}).eq('id',postId); renderThread(postId); });
     bindThreadActions(post);
     content().querySelectorAll('[data-profile]').forEach(button=>button.addEventListener('click',()=>renderProfile(button.dataset.profile)));
     status('Ready');
