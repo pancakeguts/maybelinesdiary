@@ -236,6 +236,7 @@
 
   const folderAddress = document.getElementById('folderAddress');
   const fileList = document.getElementById('fileList');
+  const nestedFolderList = document.getElementById('nestedFolderList');
   const folderEmpty = document.getElementById('folderEmpty');
   const retroGallery = document.getElementById('retroGallery');
   const galleryNote = document.getElementById('galleryNote');
@@ -287,6 +288,8 @@
   const galleryGrid = document.querySelector('.gallery-grid');
   let photos = [...document.querySelectorAll('.retro-photo')];
   const storageKey = 'maybeline-file-locations-v1';
+  const trackLocationsKey = 'maybeline-track-locations-v1';
+  const customFoldersKey = 'maybeline-custom-folders-v1';
   const allowedFolders = {
     image: ['Pictures', 'sick kvnt', 'Downloads', 'Archive'],
     video: ['Videos', 'Downloads', 'Archive'],
@@ -294,6 +297,11 @@
     document: ['Documents', 'Downloads', 'Archive']
   };
   let currentFolder = 'Media';
+  let customFolders = [];
+  try { customFolders = JSON.parse(localStorage.getItem(customFoldersKey)) || []; } catch (error) { customFolders = []; }
+  let trackLocations = {};
+  try { trackLocations = JSON.parse(localStorage.getItem(trackLocationsKey)) || {}; } catch (error) { trackLocations = {}; }
+  audioTracks.forEach((track, index) => { if (!trackLocations[index]) trackLocations[index] = 'Music'; });
   let folderHistory = ['Media'];
   let folderHistoryIndex = 0;
   let fileClipboard = null;
@@ -304,7 +312,7 @@
   const undoStack = [];
   const redoStack = [];
   function snapshotFiles() {
-    return { locations: { ...fileLocations }, photos: [...deletedPhotoIds], tracks: [...deletedTrackIndexes] };
+    return { locations: { ...fileLocations }, trackLocations: { ...trackLocations }, photos: [...deletedPhotoIds], tracks: [...deletedTrackIndexes], folders: customFolders.map(folder => ({ ...folder })) };
   }
   function persistFileState() {
     saveFileLocations();
@@ -312,6 +320,8 @@
     localStorage.setItem('maybeline-deleted-tracks', JSON.stringify([...deletedTrackIndexes]));
     localStorage.setItem('maybeline-purged-photos', JSON.stringify([...purgedPhotoIds]));
     localStorage.setItem('maybeline-purged-tracks', JSON.stringify([...purgedTrackIndexes]));
+    localStorage.setItem(customFoldersKey, JSON.stringify(customFolders));
+    localStorage.setItem(trackLocationsKey, JSON.stringify(trackLocations));
   }
   function renderTrash() {
     const content = document.getElementById('trashContent');
@@ -366,8 +376,10 @@
   function recordFileChange() { undoStack.push(snapshotFiles()); redoStack.length = 0; }
   function restoreFileState(state) {
     fileLocations = { ...state.locations };
+    trackLocations = { ...(state.trackLocations || trackLocations) };
     deletedPhotoIds = new Set(state.photos);
     deletedTrackIndexes = new Set(state.tracks);
+    customFolders = (state.folders || []).map(folder => ({ ...folder }));
     persistFileState();
     showFolder(currentFolder, false);
     if (apps.trash.window.classList.contains('open')) renderTrash();
@@ -397,29 +409,71 @@
   }
   saveFileLocations();
 
+  function customFolder(folder) { return customFolders.find(item => item.id === folder); }
+  function folderParent(folder) { return customFolder(folder)?.parent || 'Media'; }
+  function folderLabel(folder) { return customFolder(folder)?.name || folder; }
+  function folderPath(folder) {
+    const parts = [];
+    let cursor = folder;
+    while (cursor && cursor !== 'Media') {
+      parts.unshift(folderLabel(cursor));
+      cursor = folderParent(cursor);
+    }
+    return `C:\\Maybeline\\${parts.length ? parts.join('\\') : 'Media'}`;
+  }
+  function folderAccepts(kind, folder) {
+    if (folder === 'Media' || folder === 'Downloads' || folder === 'Archive') return true;
+    const custom = customFolder(folder);
+    if (custom) return folderAccepts(kind, custom.parent);
+    return (allowedFolders[kind] || []).includes(folder);
+  }
+  function renderNestedFolders(parent) {
+    const children = customFolders.filter(folder => folder.parent === parent);
+    nestedFolderList.replaceChildren();
+    children.forEach(folder => {
+      const row = document.createElement('button');
+      row.className = 'file-row nested-folder-row';
+      row.type = 'button';
+      row.dataset.folder = folder.id;
+      row.innerHTML = '<span><i class="list-folder"></i><b></b></span><time></time><em>File Folder</em>';
+      row.querySelector('b').textContent = folder.name;
+      row.querySelector('time').textContent = folder.modified || new Date().toLocaleString();
+      row.addEventListener('click', () => {
+        document.querySelectorAll('.file-row').forEach(item => item.classList.remove('selected'));
+        row.classList.add('selected');
+      });
+      row.addEventListener('dblclick', () => showFolder(folder.id));
+      nestedFolderList.append(row);
+    });
+    nestedFolderList.hidden = children.length === 0;
+    return children;
+  }
+
   function showFolder(folder, addToHistory = true) {
+    if (folder !== 'Media' && !customFolder(folder) && !document.querySelector(`[data-folder="${CSS.escape(folder)}"]`)) folder = 'Media';
     currentFolder = folder;
     if (addToHistory && folderHistory[folderHistoryIndex] !== folder) {
       folderHistory = folderHistory.slice(0, folderHistoryIndex + 1);
       folderHistory.push(folder);
       folderHistoryIndex = folderHistory.length - 1;
     }
-    folderAddress.textContent = 'C:\\Maybeline\\' + folder;
+    folderAddress.textContent = folderPath(folder);
     document.querySelectorAll('.side-location').forEach(button => button.classList.toggle('active', button.dataset.folder === folder));
     const isHome = folder === 'Media';
     const isMusic = folder === 'Music';
     const visiblePhotos = photos.filter(photo => fileLocations[photo.dataset.id] === folder && !deletedPhotoIds.has(photo.dataset.id) && !purgedPhotoIds.has(photo.dataset.id));
-    const visibleTracks = folder === 'Music' ? audioTracks.filter((track, index) => !deletedTrackIndexes.has(index) && !purgedTrackIndexes.has(index)) : [];
+    const visibleTracks = audioTracks.filter((track, index) => trackLocations[index] === folder && !deletedTrackIndexes.has(index) && !purgedTrackIndexes.has(index));
+    const childFolders = renderNestedFolders(folder);
     photos.forEach(photo => { photo.hidden = !visiblePhotos.includes(photo); });
     document.querySelectorAll('.music-file').forEach(button => { button.hidden = !visibleTracks.includes(audioTracks[Number(button.dataset.trackIndex)]); });
     fileList.hidden = !isHome;
     retroGallery.hidden = isHome || isMusic || visiblePhotos.length === 0;
-    musicLibrary.hidden = !isMusic || visibleTracks.length === 0;
-    folderEmpty.hidden = isHome || visiblePhotos.length > 0 || (isMusic && visibleTracks.length > 0);
+    musicLibrary.hidden = visibleTracks.length === 0;
+    folderEmpty.hidden = isHome || childFolders.length > 0 || visiblePhotos.length > 0 || visibleTracks.length > 0;
     photoViewer.hidden = true;
     galleryNote.textContent = `${visiblePhotos.length} picture(s) — double-click to open or drag to a folder`;
-    const count = isMusic ? visibleTracks.length : visiblePhotos.length;
-    filesStatus.textContent = isHome ? '5 object(s)' : `${count} object(s)`;
+    const count = (isHome ? 5 : visibleTracks.length + visiblePhotos.length) + childFolders.length;
+    filesStatus.textContent = `${count} object(s)`;
   }
   document.querySelectorAll('.side-location').forEach(button => button.addEventListener('click', () => showFolder(button.dataset.folder)));
   document.querySelectorAll('.file-row').forEach(row => {
@@ -436,20 +490,20 @@
   document.getElementById('filesForward').addEventListener('click', () => {
     if (folderHistoryIndex < folderHistory.length - 1) { folderHistoryIndex += 1; showFolder(folderHistory[folderHistoryIndex], false); }
   });
-  document.getElementById('filesUp').addEventListener('click', () => showFolder('Media'));
+  document.getElementById('filesUp').addEventListener('click', () => showFolder(folderParent(currentFolder)));
   document.getElementById('newFolderBtn').addEventListener('click', () => {
     const name = prompt('New folder name:');
-    if (!name || document.querySelector(`.side-location[data-folder="${CSS.escape(name)}"]`)) return;
-    const button = document.createElement('button');
-    button.className = 'side-location';
-    button.type = 'button';
-    button.dataset.folder = name;
-    button.innerHTML = '<span>📁</span> ';
-    button.append(document.createTextNode(name));
-    document.querySelector('.files-sidebar .sidebar-divider').before(button);
-    Object.values(allowedFolders).forEach(folders => folders.push(name));
-    button.addEventListener('click', () => showFolder(name));
-    filesStatus.textContent = `${name} created.`;
+    const cleanName = name?.trim();
+    if (!cleanName) { filesStatus.textContent = 'Folder creation cancelled.'; return; }
+    if (customFolders.some(folder => folder.parent === currentFolder && folder.name.toLowerCase() === cleanName.toLowerCase())) {
+      filesStatus.textContent = 'A folder with that name already exists here.';
+      return;
+    }
+    recordFileChange();
+    customFolders.push({ id: `folder-${Date.now()}`, name: cleanName, parent: currentFolder, modified: new Date().toLocaleString() });
+    persistFileState();
+    showFolder(currentFolder, false);
+    filesStatus.textContent = `${cleanName} created inside ${folderLabel(currentFolder)}.`;
   });
   function bindPhotoInteractions(photo) {
     const openPhoto = () => {
@@ -646,7 +700,7 @@
   }
   function pasteClipboard() {
     if (!fileClipboard) { filesStatus.textContent = 'The clipboard is empty.'; return; }
-    if (!(allowedFolders[fileClipboard.kind] || []).includes(currentFolder)) {
+    if (!folderAccepts(fileClipboard.kind, currentFolder)) {
       filesStatus.textContent = `${currentFolder} does not accept ${fileClipboard.kind} files.`;
       return;
     }
@@ -670,10 +724,10 @@
       }
       persistFileState();
     } else {
-      if (currentFolder !== 'Music') { filesStatus.textContent = 'Audio can currently be restored inside Music.'; return; }
       if (fileClipboard.mode === 'cut') {
         recordFileChange();
         deletedTrackIndexes.delete(Number(fileClipboard.trackIndex));
+        trackLocations[Number(fileClipboard.trackIndex)] = currentFolder;
         persistFileState();
       } else { filesStatus.textContent = 'The song is already in the Music library.'; return; }
     }
@@ -818,10 +872,10 @@
     'browser-view': [['Zoom in', () => { document.querySelector('.web-page').style.zoom = String((Number(document.querySelector('.web-page').style.zoom) || 1) + .1); }], ['Zoom out', () => { document.querySelector('.web-page').style.zoom = String(Math.max(.6, (Number(document.querySelector('.web-page').style.zoom) || 1) - .1)); }], ['Full screen', () => document.documentElement.requestFullscreen?.()]],
     'browser-favorites': [['Show Saved Tabs', () => showBrowserHome()]],
     'browser-help': [['Call for help…', openHelp], ['About Explorer', () => { statusText.textContent = 'Maybeline Explorer · 1999'; }]],
-    'files-file': [['Open', () => selectedFileItem()?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))], ['New Folder…', () => document.getElementById('newFolderBtn').click()], ['Close', () => closeApp('files')]],
+    'files-file': [['Open', () => { const item = selectedFileItem() || document.querySelector('.nested-folder-row.selected'); if (item) item.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })); else filesStatus.textContent = 'Select a file or folder first.'; }], ['New Folder…', () => document.getElementById('newFolderBtn').click()], ['Properties', () => { const item = selectedFileItem() || document.querySelector('.nested-folder-row.selected'); filesStatus.textContent = item ? `${item.innerText.trim().split('\\n')[0]} · ${item.dataset.kind || 'File Folder'}` : `${folderLabel(currentFolder)} · File Folder`; }], ['Close', () => closeApp('files')]],
     'files-edit': [['Undo', undoFileChange], ['Redo', redoFileChange], ['Cut', () => copyOrCut('cut')], ['Copy', () => copyOrCut('copy')], ['Paste', pasteClipboard], ['Delete', deleteSelected], ['Select all', () => document.querySelectorAll('.retro-photo:not([hidden]),.music-file:not([hidden])').forEach(item => item.classList.add('selected'))]],
-    'files-view': [['Large icons', () => document.querySelectorAll('.gallery-grid,.music-grid').forEach(grid => grid.classList.remove('list-view'))], ['List', () => document.querySelectorAll('.gallery-grid,.music-grid').forEach(grid => grid.classList.add('list-view'))], ['Refresh', () => showFolder(currentFolder, false)]],
-    'files-tools': [['Sort by name', () => { [...galleryGrid.children].sort((a,b) => a.innerText.localeCompare(b.innerText)).forEach(item => galleryGrid.append(item)); }], ['Reset file locations', () => { localStorage.removeItem(storageKey); localStorage.removeItem('maybeline-deleted-photos'); localStorage.removeItem('maybeline-deleted-tracks'); localStorage.removeItem('maybeline-purged-photos'); localStorage.removeItem('maybeline-purged-tracks'); location.reload(); }]],
+    'files-view': [['Large icons', () => { document.querySelectorAll('.gallery-grid,.music-grid').forEach(grid => grid.classList.remove('list-view')); filesStatus.textContent = 'Large icons view.'; }], ['List', () => { document.querySelectorAll('.gallery-grid,.music-grid').forEach(grid => grid.classList.add('list-view')); filesStatus.textContent = 'List view.'; }], ['Refresh', () => { showFolder(currentFolder, false); filesStatus.textContent = 'Folder refreshed.'; }]],
+    'files-tools': [['Sort by name', () => { [galleryGrid, musicGrid, nestedFolderList].forEach(grid => [...grid.children].sort((a,b) => a.innerText.localeCompare(b.innerText)).forEach(item => grid.append(item))); filesStatus.textContent = 'Sorted by name.'; }], ['Reset file locations', () => { if (!confirm('Reset all moved files, created folders, and deleted items?')) { filesStatus.textContent = 'Reset cancelled.'; return; } localStorage.removeItem(storageKey); localStorage.removeItem(trackLocationsKey); localStorage.removeItem(customFoldersKey); localStorage.removeItem('maybeline-deleted-photos'); localStorage.removeItem('maybeline-deleted-tracks'); localStorage.removeItem('maybeline-purged-photos'); localStorage.removeItem('maybeline-purged-tracks'); location.reload(); }]],
     'files-help': [['Call for help…', openHelp], ['About Files', () => { filesStatus.textContent = 'FILES.EXE · Maybeline system archive'; }]]
   };
   document.getElementById('undoBtn').addEventListener('click', undoFileChange);

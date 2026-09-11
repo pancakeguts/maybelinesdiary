@@ -410,3 +410,4 @@ button:focus-visible, a:focus-visible { outline: 2px dotted #000; outline-offset
   .gallery-grid { grid-template-columns: repeat(2,minmax(100px,1fr)); }
   .photo-viewer { width: calc(100vw - 12px); height: calc(100vh - 52px); }
 }
+.nested-folder-list[hidden] { display: none; }
