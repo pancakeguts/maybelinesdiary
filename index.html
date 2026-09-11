@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#008080">
   <title>Maybeline's Diary</title>
   <meta name="description" content="Enter Maybeline's Diary — music, socials, and transmissions from the web.">
-  <link rel="stylesheet" href="styles.css?v=12">
+  <link rel="stylesheet" href="styles.css?v=13">
   <script async src="https://cse.google.com/cse.js?cx=27ef410f597474080"></script>
 </head>
 <body>
@@ -36,20 +36,20 @@
         </div>
       </header>
 
-      <nav class="menu-row" aria-label="Browser menu">
-        <button type="button">File</button><button type="button">Edit</button><button type="button">View</button><button type="button">Favorites</button><button type="button">Help</button>
+      <nav class="menu-row app-menu" aria-label="Browser menu" data-app-menu="browser">
+        <button type="button" data-menu="browser-file">File</button><button type="button" data-menu="browser-edit">Edit</button><button type="button" data-menu="browser-view">View</button><button type="button" data-menu="browser-favorites">Favorites</button><button type="button" data-menu="browser-help">Help</button>
       </nav>
 
       <div class="toolbar">
         <button class="tool-button" type="button" id="backBtn" aria-label="Back"><span>←</span>Back</button>
-        <button class="tool-button muted" type="button" aria-label="Forward" disabled><span>→</span>Forward</button>
+        <button class="tool-button" type="button" id="forwardBtn" aria-label="Forward"><span>→</span>Forward</button>
         <button class="tool-button" type="button" id="refreshBtn" aria-label="Refresh"><span>↻</span>Refresh</button>
         <button class="tool-button" type="button" id="homeBtn" aria-label="Home"><span>⌂</span>Home</button>
       </div>
 
       <div class="address-row">
         <span>Address</span>
-        <div class="address-box"><span class="address-icon">M</span><span>https://maybelinesdiary.com</span></div>
+        <div class="address-box"><span class="address-icon">M</span><input id="addressInput" value="https://maybelinesdiary.com" aria-label="Website address"></div>
         <button type="button" id="goBtn">Go</button>
       </div>
 
@@ -113,17 +113,17 @@
           <button type="button" data-action="close" data-window="files" aria-label="Close Files">×</button>
         </div>
       </header>
-      <nav class="menu-row" aria-label="Files menu">
-        <button type="button">File</button><button type="button">Edit</button><button type="button">View</button><button type="button">Tools</button><button type="button">Help</button>
+      <nav class="menu-row app-menu" aria-label="Files menu" data-app-menu="files">
+        <button type="button" data-menu="files-file">File</button><button type="button" data-menu="files-edit">Edit</button><button type="button" data-menu="files-view">View</button><button type="button" data-menu="files-tools">Tools</button><button type="button" data-menu="files-help">Help</button>
       </nav>
       <div class="files-toolbar">
         <button type="button" id="filesBack">← <span>Back</span></button>
-        <button type="button">→</button>
-        <button type="button">↑</button>
+        <button type="button" id="filesForward">→</button>
+        <button type="button" id="filesUp">↑</button>
         <span class="toolbar-separator"></span>
-        <button type="button">✂ <span>Cut</span></button>
-        <button type="button">▣ <span>Copy</span></button>
-        <button type="button">▤ <span>Paste</span></button>
+        <button type="button" id="cutBtn">✂ <span>Cut</span></button>
+        <button type="button" id="copyBtn">▣ <span>Copy</span></button>
+        <button type="button" id="pasteBtn">▤ <span>Paste</span></button>
         <span class="toolbar-separator"></span>
         <button type="button" id="newFolderBtn">📁 <span>New Folder</span></button>
       </div>
@@ -237,19 +237,33 @@
       </div>
     </div>
 
+    <div class="dropdown-menu" id="dropdownMenu" hidden></div>
+
     <footer class="taskbar">
       <button class="start-button" id="startBtn" type="button" aria-expanded="false"><span class="flag" aria-hidden="true">❖</span> Start</button>
       <div class="task-divider"></div>
       <button class="task-window" id="taskWindow" type="button" hidden><span class="tiny-page">M</span> Maybeline Explorer</button>
       <button class="task-window" id="taskFiles" type="button" hidden><span class="tiny-folder"></span> Files</button>
-      <div class="tray"><span aria-hidden="true">🔊</span><time id="clock">12:00 AM</time></div>
+      <div class="tray-tools">
+        <button type="button" id="weatherBtn" aria-label="Weather"><span id="weatherIcon">☁</span><b id="weatherTemp">--°</b></button>
+        <button type="button" id="brightnessBtn" aria-label="Screen brightness">☀</button>
+        <button type="button" id="systemVolumeBtn" aria-label="System volume">🔊</button>
+        <button type="button" id="settingsBtn" aria-label="Desktop settings">⚙</button>
+      </div>
+      <div class="tray"><time id="clock">12:00 AM</time></div>
     </footer>
+
+    <section class="tray-panel" id="weatherPanel" hidden><b>Weather</b><p id="weatherDetails">Loading Melbourne weather…</p><button type="button" id="useLocationBtn">Use my location</button></section>
+    <section class="tray-panel" id="brightnessPanel" hidden><label>Screen brightness<input id="brightnessRange" type="range" min="35" max="100" value="100"></label></section>
+    <section class="tray-panel" id="volumePanel" hidden><label>System volume<input id="systemVolumeRange" type="range" min="0" max="100" value="80"></label></section>
+    <section class="tray-panel settings-panel" id="settingsPanel" hidden><b>Desktop Settings</b><label><input id="scanlinesToggle" type="checkbox" checked> Retro scanlines</label><label><input id="clockFormatToggle" type="checkbox"> 24-hour clock</label><button type="button" id="resetDesktopBtn">Reset windows and files</button></section>
+    <div class="brightness-overlay" id="brightnessOverlay" aria-hidden="true"></div>
 
     <div class="shutdown" id="shutdown" aria-hidden="true">
       <p>It is now safe to close this tab.</p>
       <button type="button" id="restartBtn">restart maybeline</button>
     </div>
   </main>
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>

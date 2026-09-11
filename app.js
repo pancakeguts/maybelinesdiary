@@ -196,9 +196,13 @@
     setTimeout(() => statusText.textContent = 'Done', 450);
   });
   document.getElementById('goBtn').addEventListener('click', () => {
-    document.getElementById('pageFrame').scrollTop = 0;
-    statusText.textContent = 'Done';
+    const value = document.getElementById('addressInput').value.trim();
+    if (!value || /maybelinesdiary\.com/i.test(value)) { showBrowserHome(); return; }
+    document.getElementById('searchInput').value = value.replace(/^https?:\/\//, '');
+    document.getElementById('webSearch').requestSubmit();
   });
+  document.getElementById('addressInput').addEventListener('keydown', event => { if (event.key === 'Enter') document.getElementById('goBtn').click(); });
+  document.getElementById('forwardBtn').addEventListener('click', () => { document.getElementById('webSearch').requestSubmit(); });
   document.getElementById('webSearch').addEventListener('submit', event => {
     event.preventDefault();
     const query = document.getElementById('searchInput').value.trim();
@@ -272,7 +276,8 @@
   let convolverNode;
   let reverbWet;
   let gainNode;
-  const photos = [...document.querySelectorAll('.retro-photo')];
+  const galleryGrid = document.querySelector('.gallery-grid');
+  let photos = [...document.querySelectorAll('.retro-photo')];
   const storageKey = 'maybeline-file-locations-v1';
   const allowedFolders = {
     image: ['Pictures', 'sick kvnt', 'Downloads', 'Archive'],
@@ -281,6 +286,9 @@
     document: ['Documents', 'Downloads', 'Archive']
   };
   let currentFolder = 'Media';
+  let folderHistory = ['Media'];
+  let folderHistoryIndex = 0;
+  let fileClipboard = null;
   let fileLocations = {};
   try { fileLocations = JSON.parse(localStorage.getItem(storageKey)) || {}; } catch (error) { fileLocations = {}; }
   photos.forEach((photo, index) => {
@@ -294,8 +302,13 @@
   }
   saveFileLocations();
 
-  function showFolder(folder) {
+  function showFolder(folder, addToHistory = true) {
     currentFolder = folder;
+    if (addToHistory && folderHistory[folderHistoryIndex] !== folder) {
+      folderHistory = folderHistory.slice(0, folderHistoryIndex + 1);
+      folderHistory.push(folder);
+      folderHistoryIndex = folderHistory.length - 1;
+    }
     folderAddress.textContent = 'C:\\Maybeline\\' + folder;
     document.querySelectorAll('.side-location').forEach(button => button.classList.toggle('active', button.dataset.folder === folder));
     const isHome = folder === 'Media';
@@ -319,11 +332,29 @@
     });
     row.addEventListener('dblclick', () => showFolder(row.dataset.folder));
   });
-  document.getElementById('filesBack').addEventListener('click', () => showFolder('Media'));
-  document.getElementById('newFolderBtn').addEventListener('click', () => {
-    filesStatus.textContent = 'New folders will be available when media is added.';
+  document.getElementById('filesBack').addEventListener('click', () => {
+    if (folderHistoryIndex > 0) { folderHistoryIndex -= 1; showFolder(folderHistory[folderHistoryIndex], false); }
+    else showFolder('Media');
   });
-  photos.forEach(photo => {
+  document.getElementById('filesForward').addEventListener('click', () => {
+    if (folderHistoryIndex < folderHistory.length - 1) { folderHistoryIndex += 1; showFolder(folderHistory[folderHistoryIndex], false); }
+  });
+  document.getElementById('filesUp').addEventListener('click', () => showFolder('Media'));
+  document.getElementById('newFolderBtn').addEventListener('click', () => {
+    const name = prompt('New folder name:');
+    if (!name || document.querySelector(`.side-location[data-folder="${CSS.escape(name)}"]`)) return;
+    const button = document.createElement('button');
+    button.className = 'side-location';
+    button.type = 'button';
+    button.dataset.folder = name;
+    button.innerHTML = '<span>📁</span> ';
+    button.append(document.createTextNode(name));
+    document.querySelector('.files-sidebar .sidebar-divider').before(button);
+    Object.values(allowedFolders).forEach(folders => folders.push(name));
+    button.addEventListener('click', () => showFolder(name));
+    filesStatus.textContent = `${name} created.`;
+  });
+  function bindPhotoInteractions(photo) {
     const openPhoto = () => {
       photoViewerImage.src = photo.dataset.full;
       photoViewerName.textContent = photo.querySelector('b').textContent + ' - Picture Viewer';
@@ -351,6 +382,16 @@
       photo.classList.remove('dragging');
       document.querySelectorAll('.side-location').forEach(button => button.classList.remove('drag-allowed', 'drag-over'));
     });
+  }
+  photos.forEach(bindPhotoInteractions);
+  retroGallery.addEventListener('dblclick', event => {
+    const photo = event.target.closest('.retro-photo');
+    if (!photo) return;
+    photoViewerImage.src = photo.dataset.full;
+    photoViewerName.textContent = photo.querySelector('b').textContent + ' - Picture Viewer';
+    photoViewer.hidden = false;
+    topZ += 1;
+    photoViewer.style.zIndex = topZ + 30;
   });
   makeFloatingDraggable(photoViewer, document.getElementById('photoViewerBar'));
 
@@ -467,6 +508,8 @@
       const button = document.createElement('button');
       button.className = 'music-file';
       button.type = 'button';
+      button.dataset.kind = 'audio';
+      button.dataset.trackIndex = String(index);
       button.innerHTML = `<span class="media-file-icon" aria-hidden="true">♫</span><b></b>`;
       button.querySelector('b').textContent = track.title;
       button.addEventListener('click', () => {
@@ -481,6 +524,53 @@
     musicNote.textContent = `${audioTracks.length} song(s) — double-click to play`;
   }
   renderMusicLibrary();
+
+  function selectedFileItem() {
+    return document.querySelector('.retro-photo.selected:not([hidden]), .music-file.selected:not([hidden])');
+  }
+  function copyOrCut(mode) {
+    const item = selectedFileItem();
+    if (!item) { filesStatus.textContent = 'Select a file first.'; return; }
+    fileClipboard = {
+      mode,
+      kind: item.dataset.kind || 'image',
+      id: item.dataset.id || null,
+      trackIndex: item.dataset.trackIndex || null
+    };
+    filesStatus.textContent = `${mode === 'cut' ? 'Cut' : 'Copied'} to clipboard.`;
+  }
+  function pasteClipboard() {
+    if (!fileClipboard) { filesStatus.textContent = 'The clipboard is empty.'; return; }
+    if (!(allowedFolders[fileClipboard.kind] || []).includes(currentFolder)) {
+      filesStatus.textContent = `${currentFolder} does not accept ${fileClipboard.kind} files.`;
+      return;
+    }
+    if (fileClipboard.kind === 'image') {
+      const source = photos.find(photo => photo.dataset.id === fileClipboard.id);
+      if (!source) return;
+      if (fileClipboard.mode === 'cut') fileLocations[source.dataset.id] = currentFolder;
+      else {
+        const clone = source.cloneNode(true);
+        clone.classList.remove('selected', 'dragging');
+        clone.dataset.id = `${source.dataset.id}-copy-${Date.now()}`;
+        clone.querySelector('b').textContent = `COPY_${source.querySelector('b').textContent}`;
+        galleryGrid.append(clone);
+        photos.push(clone);
+        fileLocations[clone.dataset.id] = currentFolder;
+        bindPhotoInteractions(clone);
+      }
+      saveFileLocations();
+    } else {
+      filesStatus.textContent = 'Audio remains linked to the Music library.';
+      return;
+    }
+    if (fileClipboard.mode === 'cut') fileClipboard = null;
+    showFolder(currentFolder, false);
+    filesStatus.textContent = 'Paste complete.';
+  }
+  document.getElementById('cutBtn').addEventListener('click', () => copyOrCut('cut'));
+  document.getElementById('copyBtn').addEventListener('click', () => copyOrCut('copy'));
+  document.getElementById('pasteBtn').addEventListener('click', pasteClipboard);
   makeFloatingDraggable(mediaPlayer, document.getElementById('mediaPlayerBar'));
   playerPlay.addEventListener('click', () => togglePlayback());
   document.getElementById('playerStop').addEventListener('click', () => { audioElement.pause(); audioElement.currentTime = 0; });
@@ -556,6 +646,87 @@
     filesStatus.textContent = `${photos.filter(photo => fileLocations[photo.dataset.id] === currentFolder).length} picture(s)`;
   });
 
+  const dropdownMenu = document.getElementById('dropdownMenu');
+  const menuDefinitions = {
+    'browser-file': [['Print…', () => print()], ['Close', () => closeApp('browser')]],
+    'browser-edit': [['Copy address', () => navigator.clipboard?.writeText(document.getElementById('addressInput').value)], ['Select address', () => document.getElementById('addressInput').select()]],
+    'browser-view': [['Zoom in', () => { document.querySelector('.web-page').style.zoom = String((Number(document.querySelector('.web-page').style.zoom) || 1) + .1); }], ['Zoom out', () => { document.querySelector('.web-page').style.zoom = String(Math.max(.6, (Number(document.querySelector('.web-page').style.zoom) || 1) - .1)); }], ['Full screen', () => document.documentElement.requestFullscreen?.()]],
+    'browser-favorites': [['Show Saved Tabs', () => showBrowserHome()]],
+    'browser-help': [['About Maybeline Explorer', () => alert('Maybeline Explorer\nRetro web browser for maybelinesdiary.com')]],
+    'files-file': [['Open', () => selectedFileItem()?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))], ['New Folder…', () => document.getElementById('newFolderBtn').click()], ['Close', () => closeApp('files')]],
+    'files-edit': [['Cut', () => copyOrCut('cut')], ['Copy', () => copyOrCut('copy')], ['Paste', pasteClipboard], ['Select all', () => document.querySelectorAll('.retro-photo:not([hidden]),.music-file:not([hidden])').forEach(item => item.classList.add('selected'))]],
+    'files-view': [['Large icons', () => document.querySelectorAll('.gallery-grid,.music-grid').forEach(grid => grid.classList.remove('list-view'))], ['List', () => document.querySelectorAll('.gallery-grid,.music-grid').forEach(grid => grid.classList.add('list-view'))], ['Refresh', () => showFolder(currentFolder, false)]],
+    'files-tools': [['Sort by name', () => { [...galleryGrid.children].sort((a,b) => a.innerText.localeCompare(b.innerText)).forEach(item => galleryGrid.append(item)); }], ['Reset file locations', () => { localStorage.removeItem(storageKey); location.reload(); }]],
+    'files-help': [['About Files', () => alert('Files\nOrganise pictures, music, videos and documents on the Maybeline desktop.')]]
+  };
+  document.querySelectorAll('[data-menu]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      dropdownMenu.replaceChildren();
+      (menuDefinitions[button.dataset.menu] || []).forEach(([label, action]) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.textContent = label;
+        item.addEventListener('click', () => { dropdownMenu.hidden = true; action(); });
+        dropdownMenu.append(item);
+      });
+      const rect = button.getBoundingClientRect();
+      dropdownMenu.style.left = `${Math.min(rect.left, innerWidth - 180)}px`;
+      dropdownMenu.style.top = `${rect.bottom}px`;
+      dropdownMenu.hidden = false;
+    });
+  });
+
+  const trayPanels = [...document.querySelectorAll('.tray-panel')];
+  function toggleTrayPanel(panel, trigger) {
+    const willOpen = panel.hidden;
+    trayPanels.forEach(item => { item.hidden = true; });
+    document.querySelectorAll('.tray-tools button').forEach(button => button.classList.remove('active'));
+    panel.hidden = !willOpen;
+    trigger.classList.toggle('active', willOpen);
+  }
+  const brightnessOverlay = document.getElementById('brightnessOverlay');
+  const brightnessRange = document.getElementById('brightnessRange');
+  const systemVolumeRange = document.getElementById('systemVolumeRange');
+  document.getElementById('brightnessBtn').addEventListener('click', event => toggleTrayPanel(document.getElementById('brightnessPanel'), event.currentTarget));
+  document.getElementById('systemVolumeBtn').addEventListener('click', event => toggleTrayPanel(document.getElementById('volumePanel'), event.currentTarget));
+  document.getElementById('settingsBtn').addEventListener('click', event => toggleTrayPanel(document.getElementById('settingsPanel'), event.currentTarget));
+  document.getElementById('weatherBtn').addEventListener('click', event => toggleTrayPanel(document.getElementById('weatherPanel'), event.currentTarget));
+  brightnessRange.addEventListener('input', () => { brightnessOverlay.style.opacity = String((100 - Number(brightnessRange.value)) / 100 * .65); });
+  systemVolumeRange.addEventListener('input', () => {
+    const volume = Number(systemVolumeRange.value) / 100;
+    document.getElementById('playerVolume').value = String(volume);
+    if (gainNode) gainNode.gain.value = volume;
+    else audioElement.volume = volume;
+    document.getElementById('systemVolumeBtn').textContent = volume === 0 ? '🔇' : volume < .5 ? '🔉' : '🔊';
+  });
+  document.getElementById('scanlinesToggle').addEventListener('change', event => { document.querySelector('.desktop-noise').hidden = !event.target.checked; });
+  let use24HourClock = false;
+  document.getElementById('clockFormatToggle').addEventListener('change', event => { use24HourClock = event.target.checked; updateClock(); });
+  document.getElementById('resetDesktopBtn').addEventListener('click', () => {
+    localStorage.removeItem(storageKey);
+    location.reload();
+  });
+
+  async function loadWeather(latitude = -37.8136, longitude = 144.9631, label = 'Melbourne') {
+    const details = document.getElementById('weatherDetails');
+    details.textContent = `Loading ${label} weather…`;
+    try {
+      const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto`);
+      const data = await response.json();
+      const temp = Math.round(data.current.temperature_2m);
+      const wet = [51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99].includes(data.current.weather_code);
+      document.getElementById('weatherIcon').textContent = wet ? '☂' : data.current.weather_code <= 3 ? '☀' : '☁';
+      document.getElementById('weatherTemp').textContent = `${temp}°`;
+      details.textContent = `${label}: ${temp}°C · Wind ${Math.round(data.current.wind_speed_10m)} km/h`;
+    } catch (error) { details.textContent = 'Weather is temporarily unavailable.'; }
+  }
+  document.getElementById('useLocationBtn').addEventListener('click', () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(position => loadWeather(position.coords.latitude, position.coords.longitude, 'Current location'), () => loadWeather());
+  });
+  loadWeather();
+
   startBtn.addEventListener('click', event => {
     event.stopPropagation();
     const open = startMenu.classList.toggle('open');
@@ -572,11 +743,16 @@
   document.getElementById('restartBtn').addEventListener('click', () => location.reload());
   document.addEventListener('click', event => {
     if (!startMenu.contains(event.target) && event.target !== startBtn) closeStart();
+    if (!event.target.closest('[data-menu]') && !event.target.closest('#dropdownMenu')) dropdownMenu.hidden = true;
+    if (!event.target.closest('.tray-panel') && !event.target.closest('.tray-tools')) {
+      trayPanels.forEach(panel => { panel.hidden = true; });
+      document.querySelectorAll('.tray-tools button').forEach(button => button.classList.remove('active'));
+    }
     if (!event.target.closest('.desktop-icon')) document.querySelectorAll('.desktop-icon').forEach(icon => icon.classList.remove('selected'));
   });
 
   function updateClock() {
-    document.getElementById('clock').textContent = new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit', hour12: !use24HourClock});
   }
   updateClock();
   setInterval(updateClock, 30000);
