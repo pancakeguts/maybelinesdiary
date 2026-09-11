@@ -53,7 +53,8 @@
   async function loadCategories() {
     const result = await db.from('categories').select('*').order('sort_order');
     if (result.error) throw result.error;
-    categories = result.data;
+    const diary = result.data.find(category => category.slug === 'life') || result.data[0];
+    categories = diary ? [{ ...diary, name: 'Diary', description: 'A place to write what you need to get out.' }] : [];
     const select = document.querySelector('#ventPostForm select[name="category"]');
     select.replaceChildren(...categories.map(category => { const option = document.createElement('option'); option.value = category.id; option.textContent = category.name; return option; }));
   }
