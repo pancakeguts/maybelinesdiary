@@ -6,7 +6,8 @@
   <meta name="theme-color" content="#008080">
   <title>Maybeline's Diary</title>
   <meta name="description" content="Enter Maybeline's Diary — music, socials, and transmissions from the web.">
-  <link rel="stylesheet" href="styles.css?v=22">
+  <link rel="stylesheet" href="styles.css?v=23">
+  <link rel="stylesheet" href="vent.css?v=23">
   <script async src="https://cse.google.com/cse.js?cx=27ef410f597474080"></script>
 </head>
 <body>
@@ -24,6 +25,11 @@
     <button class="desktop-icon files-shortcut" id="filesShortcut" type="button" aria-label="Open Files">
       <span class="folder-desktop-icon" aria-hidden="true"><span></span></span>
       <span class="icon-label">Files</span>
+    </button>
+
+    <button class="desktop-icon vent-shortcut" id="ventShortcut" type="button" aria-label="Open Vent">
+      <span class="vent-desktop-icon" aria-hidden="true"><i>V</i></span>
+      <span class="icon-label">Vent</span>
     </button>
 
     <button class="desktop-icon trash-shortcut" id="trashShortcut" type="button" aria-label="Open Recycle Bin">
@@ -243,11 +249,25 @@
       <audio id="audioElement" preload="metadata"></audio>
     </section>
 
+    <section class="browser-window vent-window" id="ventWindow" role="dialog" aria-label="Vent forum" aria-hidden="true">
+      <header class="titlebar" id="ventTitlebar"><div class="titlebar-name"><span class="vent-mini-icon">V</span> Vent</div><div class="window-actions"><button type="button" data-action="minimize" data-window="vent" aria-label="Minimize Vent">_</button><button type="button" data-action="maximize" data-window="vent" aria-label="Maximize Vent">□</button><button type="button" data-action="close" data-window="vent" aria-label="Close Vent">×</button></div></header>
+      <nav class="menu-row vent-menu"><button type="button" id="ventHomeBtn">Forum Home</button><button type="button" id="ventNewBtn">New Post</button><button type="button" id="ventProfileBtn">My Profile</button><button type="button" id="ventModerateBtn" hidden>Moderate</button><button type="button" id="ventLogoutBtn" hidden>Log Out</button></nav>
+      <div class="vent-banner"><div><b>VENT</b><span>message board</span></div><form id="ventSearchForm"><input id="ventSearchInput" type="search" placeholder="Search posts…" aria-label="Search Vent"><button type="submit">Search</button></form></div>
+      <div class="vent-notice">A public place to get things out. Protect your privacy. Report anything unsafe.</div>
+      <main class="vent-content" id="ventContent">
+        <section class="vent-auth" id="ventAuth"><div class="vent-auth-tabs"><button type="button" data-auth-tab="login" class="active">Log in</button><button type="button" data-auth-tab="signup">Register</button></div><form id="ventLoginForm"><label>Username<input name="username" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]+" required></label><label>Password<input name="password" type="password" minlength="8" required></label><button type="submit">Log in</button></form><form id="ventSignupForm" hidden><label>Choose a username<input name="username" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]+" required></label><label>Choose a password<input name="password" type="password" minlength="8" required></label><label>Confirm password<input name="confirm" type="password" minlength="8" required></label><p>Use 3–20 letters, numbers or underscores. Your username is public.</p><button type="submit">Create account</button></form><div class="vent-form-status" id="ventAuthStatus">Log in to post. Anyone can read.</div></section>
+        <section id="ventForum" hidden><div class="vent-loading">Connecting to Vent…</div></section>
+      </main>
+      <footer class="statusbar"><span id="ventStatus">Ready</span><span id="ventUserStatus">Guest</span></footer>
+      <dialog class="vent-dialog" id="ventComposer"><form method="dialog" id="ventPostForm"><div class="vent-dialog-title">New discussion</div><label>Board<select name="category" required></select></label><label>Subject<input name="title" minlength="3" maxlength="120" required></label><label>Message<textarea name="body" rows="9" maxlength="10000" required></textarea></label><div class="vent-dialog-actions"><button type="button" id="ventComposerCancel">Cancel</button><button type="submit" value="default">Post</button></div></form></dialog>
+    </section>
+
     <div class="start-menu" id="startMenu" aria-hidden="true">
       <div class="start-side">MAYBELINE</div>
       <div class="start-items">
         <button type="button" id="startInternet"><span>🌐</span> maybeline.net</button>
         <button type="button" id="startFiles"><span>📁</span> Files</button>
+        <button type="button" id="startVent"><span>💬</span> Vent</button>
         <div class="menu-line"></div>
         <button type="button" id="shutDown"><span>◉</span> Shut Down...</button>
       </div>
@@ -275,6 +295,7 @@
       <button class="task-window" id="taskWindow" type="button" hidden><span class="tiny-page">M</span> Maybeline Explorer</button>
       <button class="task-window" id="taskFiles" type="button" hidden><span class="tiny-folder"></span> Files</button>
       <button class="task-window" id="taskTrash" type="button" hidden><span>♲</span> Recycle Bin</button>
+      <button class="task-window" id="taskVent" type="button" hidden><span class="vent-mini-icon">V</span> Vent</button>
       <div class="tray-tools">
         <button type="button" id="weatherBtn" aria-label="Weather"><span id="weatherIcon">☁</span><b id="weatherTemp">--°</b></button>
         <button type="button" id="brightnessBtn" aria-label="Screen brightness">☀</button>
@@ -295,6 +316,9 @@
       <button type="button" id="restartBtn">restart maybeline</button>
     </div>
   </main>
-  <script src="app.js?v=22"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="vent-config.js?v=23"></script>
+  <script src="app.js?v=23"></script>
+  <script src="vent.js?v=23"></script>
 </body>
 </html>

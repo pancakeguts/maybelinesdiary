@@ -37,6 +37,13 @@
       task: document.getElementById('taskTrash'),
       titlebar: document.getElementById('trashTitlebar'),
       minimized: false
+    },
+    vent: {
+      window: document.getElementById('ventWindow'),
+      shortcut: document.getElementById('ventShortcut'),
+      task: document.getElementById('taskVent'),
+      titlebar: document.getElementById('ventTitlebar'),
+      minimized: false
     }
   };
 
@@ -62,6 +69,7 @@
     app.minimized = false;
     focusApp(app);
     if (name === 'trash') renderTrash();
+    if (name === 'vent') window.initVent?.();
     closeStart();
   }
 
@@ -1038,6 +1046,7 @@
   });
   document.getElementById('startInternet').addEventListener('click', () => openApp('browser'));
   document.getElementById('startFiles').addEventListener('click', () => openApp('files'));
+  document.getElementById('startVent').addEventListener('click', () => openApp('vent'));
   document.getElementById('shutDown').addEventListener('click', () => {
     document.getElementById('shutdown').classList.add('show');
     document.getElementById('shutdown').setAttribute('aria-hidden', 'false');
