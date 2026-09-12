@@ -1046,6 +1046,48 @@
   }
   document.querySelector('.files-content').addEventListener('contextmenu', event => showContextMenu(event, event.target.closest('.retro-photo,.music-file')));
 
+  function showDesktopContextMenu(event) {
+    event.preventDefault();
+    contextMenu.replaceChildren();
+    const actions = [
+      ['↻', 'Refresh', () => location.reload()],
+      ['▦', 'Arrange icons', () => {
+        Object.keys(apps).forEach(name => localStorage.removeItem(`desktop-icon-${name}`));
+        location.reload();
+      }],
+      null,
+      ['🌐', 'Open maybeline.net', () => openApp('browser')],
+      ['📁', 'Open Files', () => openApp('files')],
+      ['💬', 'Open iVent', () => openApp('vent')],
+      ['♲', 'Open Recycle Bin', () => openApp('trash')],
+      null,
+      ['⚙', 'Desktop settings', () => document.getElementById('settingsBtn').click()]
+    ];
+    actions.forEach(action => {
+      if (!action) {
+        contextMenu.append(document.createElement('hr'));
+        return;
+      }
+      const [icon, label, handler] = action;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.innerHTML = `<span aria-hidden="true">${icon}</span><span>${label}</span>`;
+      button.addEventListener('click', () => {
+        contextMenu.hidden = true;
+        handler();
+      });
+      contextMenu.append(button);
+    });
+    contextMenu.style.left = `${Math.min(event.clientX, innerWidth - 215)}px`;
+    contextMenu.style.top = `${Math.min(event.clientY, innerHeight - 285)}px`;
+    contextMenu.hidden = false;
+  }
+
+  document.getElementById('desktop').addEventListener('contextmenu', event => {
+    if (event.target.closest('.browser-window,.floating-viewer,.taskbar,.start-menu,.tray-panel,.dropdown-menu,.context-menu')) return;
+    showDesktopContextMenu(event);
+  });
+
   const trayPanels = [...document.querySelectorAll('.tray-panel')];
   function toggleTrayPanel(panel, trigger) {
     const willOpen = panel.hidden;
