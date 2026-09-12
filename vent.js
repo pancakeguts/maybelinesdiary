@@ -32,7 +32,7 @@
     finally { button.disabled = false; button.textContent = label; }
   }
 
-  function ventDialog({ title = 'ivent', message = '', label = 'Message', value = null, confirmText = 'OK', cancelText = 'Cancel', danger = false } = {}) {
+  function ventDialog({ title = 'iVent', message = '', label = 'Message', value = null, confirmText = 'OK', cancelText = 'Cancel', danger = false } = {}) {
     const dialog = document.getElementById('ventSiteDialog');
     const field = document.getElementById('ventSiteDialogField');
     const input = document.getElementById('ventSiteDialogInput');
@@ -54,9 +54,9 @@
       setTimeout(() => (value === null ? confirmButton : input).focus(), 20);
     });
   }
-  const ventMessage = (message, title = 'ivent') => ventDialog({ title, message, cancelText: null });
+  const ventMessage = (message, title = 'iVent') => ventDialog({ title, message, cancelText: null });
   const ventConfirm = (message, title = 'Please confirm') => ventDialog({ title, message, confirmText: 'Delete', danger: true });
-  const ventPrompt = (message, value = '', title = 'ivent') => ventDialog({ title, label: message, value });
+  const ventPrompt = (message, value = '', title = 'iVent') => ventDialog({ title, label: message, value });
 
   function updateUnread(section = null, change = 0) {
     if (section) unread[section] = Math.max(0, (unread[section] || 0) + change);
@@ -201,7 +201,7 @@
   function showError(error) {
     console.error(error);
     status('Error');
-    content().innerHTML = `<div class="vent-error"><b>ivent could not complete that.</b><br>${esc(error?.message || error)}</div>`;
+    content().innerHTML = `<div class="vent-error"><b>iVent could not complete that.</b><br>${esc(error?.message || error)}</div>`;
   }
 
   async function loadIdentity() {
@@ -375,8 +375,8 @@
   }
 
   document.querySelectorAll('[data-auth-tab]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-auth-tab]').forEach(b=>b.classList.toggle('active',b===button));document.getElementById('ventLoginForm').hidden=button.dataset.authTab!=='login';document.getElementById('ventSignupForm').hidden=button.dataset.authTab!=='signup';authStatus(button.dataset.authTab==='login'?'Enter your username and password.':'Choose a unique username.');}));
-  document.getElementById('ventLoginForm').addEventListener('submit',event=>{event.preventDefault();withAuthButton(event.currentTarget,async()=>{if(!db)throw new Error('ivent is still connecting. Try again in a moment.');const data=new FormData(event.currentTarget);authStatus('Logging in…');const result=await db.auth.signInWithPassword({email:fakeEmail(data.get('username')),password:data.get('password')});if(result.error)throw result.error;authStatus('Logged in.','success');event.currentTarget.reset();});});
-  document.getElementById('ventSignupForm').addEventListener('submit',event=>{event.preventDefault();withAuthButton(event.currentTarget,async()=>{if(!db)throw new Error('ivent is still connecting. Try again in a moment.');const data=new FormData(event.currentTarget);const username=data.get('username').trim();if(data.get('password')!==data.get('confirm'))throw new Error('Passwords do not match.');authStatus('Checking username…');const existing=await db.from('profiles').select('id').ilike('username',username).limit(1);if(existing.error)throw existing.error;if(existing.data.length)throw new Error('That username is already taken.');authStatus('Creating account…');const result=await db.auth.signUp({email:fakeEmail(username),password:data.get('password'),options:{data:{username}}});if(result.error)throw result.error;if(!result.data.session)throw new Error('Sign-up is waiting for email confirmation. In Supabase, turn Confirm email off, save it, then try again.');authStatus(`Welcome, ${username}. Your account is ready.`,'success');event.currentTarget.reset();});});
+  document.getElementById('ventLoginForm').addEventListener('submit',event=>{event.preventDefault();withAuthButton(event.currentTarget,async()=>{if(!db)throw new Error('iVent is still connecting. Try again in a moment.');const data=new FormData(event.currentTarget);authStatus('Logging in…');const result=await db.auth.signInWithPassword({email:fakeEmail(data.get('username')),password:data.get('password')});if(result.error)throw result.error;authStatus('Logged in.','success');event.currentTarget.reset();});});
+  document.getElementById('ventSignupForm').addEventListener('submit',event=>{event.preventDefault();withAuthButton(event.currentTarget,async()=>{if(!db)throw new Error('iVent is still connecting. Try again in a moment.');const data=new FormData(event.currentTarget);const username=data.get('username').trim();if(data.get('password')!==data.get('confirm'))throw new Error('Passwords do not match.');authStatus('Checking username…');const existing=await db.from('profiles').select('id').ilike('username',username).limit(1);if(existing.error)throw existing.error;if(existing.data.length)throw new Error('That username is already taken.');authStatus('Creating account…');const result=await db.auth.signUp({email:fakeEmail(username),password:data.get('password'),options:{data:{username}}});if(result.error)throw result.error;if(!result.data.session)throw new Error('Sign-up is waiting for email confirmation. In Supabase, turn Confirm email off, save it, then try again.');authStatus(`Welcome, ${username}. Your account is ready.`,'success');event.currentTarget.reset();});});
   document.getElementById('ventPostForm').addEventListener('submit',async event=>{event.preventDefault();if(event.submitter?.value==='cancel')return;const data=new FormData(event.currentTarget);const result=await db.from('posts').insert({author_id:session.user.id,category_id:Number(data.get('category')),title:data.get('title').trim(),body:data.get('body').trim()}).select('id').single();if(result.error){event.preventDefault();return ventMessage(result.error.message,'Could not create post');}document.getElementById('ventComposer').close();event.currentTarget.reset();renderThread(result.data.id);});
   document.getElementById('ventComposerCancel').addEventListener('click',()=>document.getElementById('ventComposer').close());
   document.getElementById('ventHomeBtn').addEventListener('click',()=>{clearUnread('forum');renderHome();});

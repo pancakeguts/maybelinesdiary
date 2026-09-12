@@ -137,8 +137,10 @@
     if (saved) {
       try {
         const position = JSON.parse(saved);
-        shortcut.style.left = `${position.left}px`;
-        shortcut.style.top = `${position.top}px`;
+        const maxX = Math.max(0, innerWidth - shortcut.offsetWidth);
+        const maxY = Math.max(0, innerHeight - 42 - shortcut.offsetHeight);
+        shortcut.style.left = `${Math.max(0, Math.min(maxX, Number(position.left) || 0))}px`;
+        shortcut.style.top = `${Math.max(0, Math.min(maxY, Number(position.top) || 0))}px`;
         shortcut.style.right = 'auto';
         shortcut.style.bottom = 'auto';
       } catch (_) { localStorage.removeItem(`desktop-icon-${name}`); }
