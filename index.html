@@ -7,7 +7,8 @@
   <title>Maybeline's Diary</title>
   <meta name="description" content="Enter Maybeline's Diary — music, socials, and transmissions from the web.">
   <link rel="stylesheet" href="styles.css?v=24">
-  <link rel="stylesheet" href="vent.css?v=31">
+  <link rel="stylesheet" href="vent.css?v=32">
+  <style>.vent-unread-badge{top:-9px;right:-9px}.vent-friend-row>button:first-child{justify-self:start;text-align:left}</style>
   <script async src="https://cse.google.com/cse.js?cx=27ef410f597474080"></script>
 </head>
 <body>
@@ -27,8 +28,8 @@
       <span class="icon-label">Files</span>
     </button>
 
-    <button class="desktop-icon vent-shortcut" id="ventShortcut" type="button" aria-label="Open Vent"><span class="vent-unread-badge" id="ventDesktopBadge" hidden>0</span>
-      <span class="vent-desktop-icon" aria-hidden="true"><i></i><b>•••</b></span>
+    <button class="desktop-icon vent-shortcut" id="ventShortcut" type="button" aria-label="Open Vent">
+      <span class="vent-desktop-icon" aria-hidden="true"><i></i><b>•••</b><span class="vent-unread-badge" id="ventDesktopBadge" hidden>0</span></span>
       <span class="icon-label">Vent</span>
     </button>
 
@@ -253,7 +254,7 @@
       <header class="titlebar" id="ventTitlebar"><div class="titlebar-name"><span class="vent-mini-icon">•••</span> Vent</div><div class="window-actions"><button type="button" data-action="minimize" data-window="vent" aria-label="Minimize Vent">_</button><button type="button" data-action="maximize" data-window="vent" aria-label="Maximize Vent">□</button><button type="button" data-action="close" data-window="vent" aria-label="Close Vent">×</button></div></header>
       <nav class="menu-row vent-menu"><button type="button" id="ventHomeBtn">Forum Home <span class="vent-nav-badge" id="ventForumBadge" hidden>0</span></button><button type="button" id="ventNewBtn">New Post</button><button type="button" id="ventProfileBtn">My Profile <span class="vent-nav-badge" id="ventProfileBadge" hidden>0</span></button><button type="button" id="ventFriendsBtn">Friends <span class="vent-nav-badge" id="ventFriendsBadge" hidden>0</span></button><button type="button" id="ventMessagesBtn">Messages <span class="vent-nav-badge" id="ventMessagesBadge" hidden>0</span></button><button type="button" id="ventModerateBtn" hidden>Moderate <span class="vent-nav-badge" id="ventModerationBadge" hidden>0</span></button><button type="button" id="ventLogoutBtn" hidden>Log Out</button></nav>
       <div class="vent-banner"><div><b>VENT</b><span>message board</span></div><form id="ventSearchForm"><input id="ventSearchInput" type="search" placeholder="Search posts…" aria-label="Search Vent"><button type="submit">Search</button></form></div>
-      <div class="vent-notice">A public place to get things out. Protect your privacy. Report anything unsafe.</div>
+      <div class="vent-notice">a public place to let things out to eachother &lt;3 ur safe here</div>
       <main class="vent-content" id="ventContent">
         <section class="vent-auth" id="ventAuth"><div class="vent-auth-tabs"><button type="button" data-auth-tab="login" class="active">Log in</button><button type="button" data-auth-tab="signup">Sign up</button></div><form id="ventLoginForm"><label>Username<input name="username" autocomplete="username" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]+" required></label><label>Password<input name="password" autocomplete="current-password" type="password" minlength="8" required></label><button type="submit">Log in</button></form><form id="ventSignupForm" hidden><label>Choose a username<input name="username" autocomplete="username" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]+" required></label><label>Choose a password<input name="password" autocomplete="new-password" type="password" minlength="8" required></label><label>Confirm password<input name="confirm" autocomplete="new-password" type="password" minlength="8" required></label><p>Use 3–20 letters, numbers or underscores. Your username is public.</p><button type="submit">Sign up</button></form><div class="vent-form-status" id="ventAuthStatus" role="status" aria-live="polite">Log in to post. Anyone can read.</div></section>
         <section id="ventForum" hidden><div class="vent-loading">Connecting to Vent…</div></section>
