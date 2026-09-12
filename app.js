@@ -44,6 +44,13 @@
       task: document.getElementById('taskVent'),
       titlebar: document.getElementById('ventTitlebar'),
       minimized: false
+    },
+    settings: {
+      window: document.getElementById('settingsWindow'),
+      shortcut: null,
+      task: document.getElementById('taskSettings'),
+      titlebar: document.getElementById('settingsTitlebar'),
+      minimized: false
     }
   };
 
@@ -108,6 +115,15 @@
 
   function bindShortcut(name) {
     const app = apps[name];
+    if (!app.shortcut) {
+      app.task.addEventListener('click', () => {
+        if (app.minimized || app.window.style.display === 'none') openApp(name);
+        else if (app.task.classList.contains('active')) minimizeApp(name);
+        else focusApp(app);
+      });
+      app.window.addEventListener('pointerdown', () => focusApp(app));
+      return;
+    }
     app.shortcut.addEventListener('click', () => {
       document.querySelectorAll('.desktop-icon').forEach(icon => icon.classList.remove('selected'));
       app.shortcut.classList.add('selected');
@@ -127,6 +143,7 @@
 
   function bindShortcutDrag(name) {
     const shortcut = apps[name].shortcut;
+    if (!shortcut) return;
     let pointerId = null;
     let startX = 0;
     let startY = 0;
@@ -1101,7 +1118,7 @@
   const systemVolumeRange = document.getElementById('systemVolumeRange');
   document.getElementById('brightnessBtn').addEventListener('click', event => toggleTrayPanel(document.getElementById('brightnessPanel'), event.currentTarget));
   document.getElementById('systemVolumeBtn').addEventListener('click', event => toggleTrayPanel(document.getElementById('volumePanel'), event.currentTarget));
-  document.getElementById('settingsBtn').addEventListener('click', event => toggleTrayPanel(document.getElementById('settingsPanel'), event.currentTarget));
+  document.getElementById('settingsBtn').addEventListener('click', () => openApp('settings'));
   document.getElementById('weatherBtn').addEventListener('click', event => toggleTrayPanel(document.getElementById('weatherPanel'), event.currentTarget));
   brightnessRange.addEventListener('input', () => { brightnessOverlay.style.opacity = String((100 - Number(brightnessRange.value)) / 100 * .65); });
   systemVolumeRange.addEventListener('input', () => {
@@ -1111,9 +1128,41 @@
     else audioElement.volume = volume;
     document.getElementById('systemVolumeBtn').textContent = volume === 0 ? '🔇' : volume < .5 ? '🔉' : '🔊';
   });
-  document.getElementById('scanlinesToggle').addEventListener('change', event => { document.querySelector('.desktop-noise').hidden = !event.target.checked; });
-  let use24HourClock = false;
-  document.getElementById('clockFormatToggle').addEventListener('change', event => { use24HourClock = event.target.checked; updateClock(); });
+  const desktop = document.getElementById('desktop');
+  const savedWallpaper = localStorage.getItem('maybeline-wallpaper') || 'teal';
+  const savedIconSize = localStorage.getItem('maybeline-icon-size') || 'standard';
+  const scanlinesEnabled = localStorage.getItem('maybeline-scanlines') !== 'off';
+  const largeTextEnabled = localStorage.getItem('maybeline-large-text') === 'on';
+  const reduceMotionEnabled = localStorage.getItem('maybeline-reduce-motion') === 'on';
+  let use24HourClock = localStorage.getItem('maybeline-24-hour') === 'on';
+  const applyDesktopSettings = () => {
+    desktop.dataset.wallpaper = document.getElementById('wallpaperSelect').value;
+    desktop.dataset.iconSize = document.getElementById('iconSizeSelect').value;
+    desktop.classList.toggle('large-interface-text', document.getElementById('largeTextToggle').checked);
+    desktop.classList.toggle('reduce-motion', document.getElementById('reduceMotionToggle').checked);
+    document.querySelector('.desktop-noise').hidden = !document.getElementById('scanlinesToggle').checked;
+  };
+  document.getElementById('wallpaperSelect').value = savedWallpaper;
+  document.getElementById('iconSizeSelect').value = savedIconSize;
+  document.getElementById('scanlinesToggle').checked = scanlinesEnabled;
+  document.getElementById('largeTextToggle').checked = largeTextEnabled;
+  document.getElementById('reduceMotionToggle').checked = reduceMotionEnabled;
+  document.getElementById('clockFormatToggle').checked = use24HourClock;
+  applyDesktopSettings();
+  document.getElementById('wallpaperSelect').addEventListener('change', event => { localStorage.setItem('maybeline-wallpaper', event.target.value); applyDesktopSettings(); });
+  document.getElementById('iconSizeSelect').addEventListener('change', event => { localStorage.setItem('maybeline-icon-size', event.target.value); applyDesktopSettings(); });
+  document.getElementById('scanlinesToggle').addEventListener('change', event => { localStorage.setItem('maybeline-scanlines', event.target.checked ? 'on' : 'off'); applyDesktopSettings(); });
+  document.getElementById('largeTextToggle').addEventListener('change', event => { localStorage.setItem('maybeline-large-text', event.target.checked ? 'on' : 'off'); applyDesktopSettings(); });
+  document.getElementById('reduceMotionToggle').addEventListener('change', event => { localStorage.setItem('maybeline-reduce-motion', event.target.checked ? 'on' : 'off'); applyDesktopSettings(); });
+  document.getElementById('clockFormatToggle').addEventListener('change', event => { use24HourClock = event.target.checked; localStorage.setItem('maybeline-24-hour', use24HourClock ? 'on' : 'off'); updateClock(); });
+  document.querySelectorAll('[data-settings-jump]').forEach(button => button.addEventListener('click', () => {
+    document.querySelectorAll('[data-settings-jump]').forEach(item => item.classList.toggle('active', item === button));
+    document.getElementById(button.dataset.settingsJump).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }));
+  document.getElementById('restoreIconPositionsBtn').addEventListener('click', () => {
+    ['browser','files','vent','trash'].forEach(name => localStorage.removeItem(`desktop-icon-${name}`));
+    location.reload();
+  });
   document.getElementById('resetDesktopBtn').addEventListener('click', () => {
     localStorage.removeItem(storageKey);
     localStorage.removeItem('maybeline-deleted-photos');

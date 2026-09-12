@@ -1,0 +1,22 @@
+.settings-window{width:min(760px,calc(100vw - 28px));height:min(620px,calc(100vh - 70px));left:50%;top:48%;transform:translate(-50%,-50%)}
+.settings-page{display:grid;grid-template-columns:180px 1fr;min-height:0;flex:1;background:#dfdfdf;overflow:hidden}
+.settings-nav{padding:12px 8px;border-right:2px groove #fff;background:#c0c0c0}
+.settings-nav button{display:block;width:100%;padding:9px 10px;border:0;background:transparent;text-align:left;font:inherit}
+.settings-nav button:hover,.settings-nav button.active{color:#fff;background:#000080}
+.settings-content{overflow:auto;padding:18px}
+.settings-content h1{margin:0 0 16px;font-size:25px}
+.settings-group{display:grid;gap:12px;margin-bottom:18px;padding:14px;border:2px groove #fff;background:#c0c0c0}
+.settings-group h2{margin:-3px 0 4px;font-size:18px}
+.settings-group label:not(.settings-check){display:grid;grid-template-columns:170px minmax(160px,1fr);align-items:center;gap:12px}
+.settings-group select,.settings-group button{min-height:34px;padding:4px 8px;border:2px inset #fff;background:#fff;font:inherit}
+.settings-group button{width:max-content;border-style:outset;background:#c0c0c0}
+.settings-check{display:flex;align-items:center;gap:8px}
+.settings-warning{margin:0;color:#555;font-size:13px}
+.desktop[data-wallpaper="midnight"]{background-color:#071a3d;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px)}
+.desktop[data-wallpaper="violet"]{background-color:#3b1263;background-image:radial-gradient(circle at 70% 20%,#742575 0,transparent 45%),linear-gradient(#3b1263,#160526)}
+.desktop[data-wallpaper="green"]{background-color:#0b563e;background-image:linear-gradient(135deg,rgba(255,255,255,.05) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.05) 50%,rgba(255,255,255,.05) 75%,transparent 75%)}
+.desktop[data-icon-size="small"] .desktop-icon{transform:scale(.85);transform-origin:top left}
+.desktop[data-icon-size="large"] .desktop-icon{transform:scale(1.2);transform-origin:top left}
+.desktop.large-interface-text{font-size:118%}
+.desktop.reduce-motion *{scroll-behavior:auto!important;animation:none!important;transition:none!important}
+@media(max-width:620px){.settings-page{grid-template-columns:1fr}.settings-nav{display:flex;gap:3px;overflow:auto;border-right:0;border-bottom:2px groove #fff}.settings-nav button{width:auto;white-space:nowrap}.settings-group label:not(.settings-check){grid-template-columns:1fr}.settings-window{height:calc(100vh - 52px)}}

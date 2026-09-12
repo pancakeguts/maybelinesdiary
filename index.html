@@ -8,6 +8,7 @@
   <meta name="description" content="Enter Maybeline's Diary — music, socials, and transmissions from the web.">
   <link rel="stylesheet" href="styles.css?v=24">
   <link rel="stylesheet" href="vent.css?v=32">
+  <link rel="stylesheet" href="settings.css?v=1">
   <style>.vent-unread-badge{top:-9px;right:-9px}.vent-friend-row>button:first-child{justify-self:start;text-align:left}</style>
   <script async src="https://cse.google.com/cse.js?cx=27ef410f597474080"></script>
 </head>
@@ -291,6 +292,20 @@
       <div class="help-statusbar"><span id="helpStatus">Ready</span><span>maybeline.net</span></div>
     </section>
 
+    <section class="browser-window settings-window" id="settingsWindow" role="dialog" aria-label="Desktop Settings" aria-hidden="true">
+      <header class="titlebar" id="settingsTitlebar"><div class="titlebar-name"><span aria-hidden="true">⚙</span> Desktop Settings</div><div class="window-actions"><button type="button" data-action="minimize" data-window="settings" aria-label="Minimize Settings">_</button><button type="button" data-action="maximize" data-window="settings" aria-label="Maximize Settings">□</button><button type="button" data-action="close" data-window="settings" aria-label="Close Settings">×</button></div></header>
+      <div class="settings-page">
+        <aside class="settings-nav" aria-label="Settings sections"><button type="button" class="active" data-settings-jump="settingsAppearance">Appearance</button><button type="button" data-settings-jump="settingsAccessibility">Accessibility</button><button type="button" data-settings-jump="settingsDesktop">Desktop</button></aside>
+        <div class="settings-content">
+          <h1>Desktop Settings</h1>
+          <section class="settings-group" id="settingsAppearance"><h2>Appearance</h2><label>Wallpaper<select id="wallpaperSelect"><option value="teal">Classic teal</option><option value="midnight">Midnight blue</option><option value="violet">Deep violet</option><option value="green">Forest green</option></select></label><label>Desktop icon size<select id="iconSizeSelect"><option value="small">Small</option><option value="standard">Standard</option><option value="large">Large</option></select></label><label class="settings-check"><input id="scanlinesToggle" type="checkbox" checked> Retro scanlines</label></section>
+          <section class="settings-group" id="settingsAccessibility"><h2>Accessibility</h2><label class="settings-check"><input id="largeTextToggle" type="checkbox"> Larger interface text</label><label class="settings-check"><input id="reduceMotionToggle" type="checkbox"> Reduce movement and animation</label><label class="settings-check"><input id="clockFormatToggle" type="checkbox"> Use 24-hour clock</label></section>
+          <section class="settings-group" id="settingsDesktop"><h2>Desktop</h2><button type="button" id="restoreIconPositionsBtn">Restore default icon positions</button><button type="button" id="resetDesktopBtn">Reset windows and files</button><p class="settings-warning">Reset windows and files removes your saved desktop layout and locally deleted items.</p></section>
+        </div>
+      </div>
+      <footer class="statusbar"><span>Settings are saved automatically</span><span>Desktop</span></footer>
+    </section>
+
     <footer class="taskbar">
       <button class="start-button" id="startBtn" type="button" aria-expanded="false"><span class="flag" aria-hidden="true">❖</span> Start</button>
       <div class="task-divider"></div>
@@ -298,6 +313,7 @@
       <button class="task-window" id="taskFiles" type="button" hidden><span class="tiny-folder"></span> Files</button>
       <button class="task-window" id="taskTrash" type="button" hidden><span>♲</span> Recycle Bin</button>
       <button class="task-window" id="taskVent" type="button" hidden><span class="vent-mini-icon">i</span> iVent <span class="vent-task-badge" id="ventTaskBadge" hidden>0</span></button>
+      <button class="task-window" id="taskSettings" type="button" hidden><span>⚙</span> Settings</button>
       <div class="tray-tools">
         <button type="button" id="weatherBtn" aria-label="Weather"><span id="weatherIcon">☁</span><b id="weatherTemp">--°</b></button>
         <button type="button" id="brightnessBtn" aria-label="Screen brightness">☀</button>
@@ -310,7 +326,6 @@
     <section class="tray-panel" id="weatherPanel" hidden><b>Weather</b><p id="weatherDetails">Loading Melbourne weather…</p><button type="button" id="useLocationBtn">Use my location</button></section>
     <section class="tray-panel" id="brightnessPanel" hidden><label>Screen brightness<input id="brightnessRange" type="range" min="35" max="100" value="100"></label></section>
     <section class="tray-panel" id="volumePanel" hidden><label>System volume<input id="systemVolumeRange" type="range" min="0" max="100" value="80"></label></section>
-    <section class="tray-panel settings-panel" id="settingsPanel" hidden><b>Desktop Settings</b><label><input id="scanlinesToggle" type="checkbox" checked> Retro scanlines</label><label><input id="clockFormatToggle" type="checkbox"> 24-hour clock</label><button type="button" id="resetDesktopBtn">Reset windows and files</button></section>
     <div class="brightness-overlay" id="brightnessOverlay" aria-hidden="true"></div>
     <aside class="vent-notification-stack" id="ventNotificationStack" aria-live="polite" aria-label="iVent notifications"></aside>
 
@@ -321,7 +336,7 @@
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="vent-config.js?v=24"></script>
-  <script src="app.js?v=28"></script>
+  <script src="app.js?v=29"></script>
   <script src="vent.js?v=34"></script>
 </body>
 </html>
