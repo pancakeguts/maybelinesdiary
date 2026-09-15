@@ -331,6 +331,13 @@
   const musicLibrary = document.getElementById('musicLibrary');
   const musicGrid = document.getElementById('musicGrid');
   const musicNote = document.getElementById('musicNote');
+  const videoLibrary = document.getElementById('videoLibrary');
+  const videoGrid = document.getElementById('videoGrid');
+  const videoNote = document.getElementById('videoNote');
+  const videoPlayer = document.getElementById('videoPlayer');
+  const videoElement = document.getElementById('videoElement');
+  const videoPlayerName = document.getElementById('videoPlayerName');
+  const videoPlayerCounter = document.getElementById('videoPlayerCounter');
   const photoViewer = document.getElementById('photoViewer');
   const photoViewerImage = document.getElementById('photoViewerImage');
   const photoViewerName = document.getElementById('photoViewerName');
@@ -359,6 +366,25 @@
       src: 'karma-prod-eflen.mp3'
     }
   ];
+  const videoFiles = [
+    ['CAM_0007.MP4', 'assets/videos/CAM_0007.MP4'],
+    ['TAPE_1999_02.MP4', 'assets/videos/TAPE_1999_02.MP4'],
+    ['RECOVERED_03.MP4', 'assets/videos/RECOVERED_03.MP4'],
+    ['VIDEO_CD_04.MP4', 'assets/videos/VIDEO_CD_04.MP4'],
+    ['UNTITLED_05.MP4', 'assets/videos/UNTITLED_05.MP4'],
+    ['CAMCORDER_06.MP4', 'assets/videos/CAMCORDER_06.MP4'],
+    ['TV_CAPTURE_07.MP4', 'assets/videos/TV_CAPTURE_07.MP4'],
+    ['VHS_RIP_08.MP4', 'assets/videos/VHS_RIP_08.MP4'],
+    ['WEBCAM_09.MP4', 'assets/videos/WEBCAM_09.MP4'],
+    ['CARTOON_10.MP4', 'assets/videos/CARTOON_10.MP4'],
+    ['VIDEO_TAPE_11.MP4', 'assets/videos/VIDEO_TAPE_11.MP4'],
+    ['TV_RECORDING_12.MP4', 'assets/videos/TV_RECORDING_12.MP4'],
+    ['OLD_CLIP_13.MP4', 'assets/videos/OLD_CLIP_13.MP4'],
+    ['INTERVIEW_14.MP4', 'assets/videos/INTERVIEW_14.MP4'],
+    ['BODYBUILDING_15.MP4', 'assets/videos/BODYBUILDING_15.MP4'],
+    ['GYM_TAPE_16.MP4', 'assets/videos/GYM_TAPE_16.MP4'],
+    ['WORKOUT_TAPE_17.MP4', 'assets/videos/WORKOUT_TAPE_17.MP4']
+  ].map(([name, src], index) => ({ name, src, thumb: `assets/videos/thumbs/VIDEO_${String(index + 1).padStart(2, '0')}.jpg` }));
   let currentTrackIndex = -1;
   let audioContext;
   let audioSource;
@@ -549,6 +575,7 @@
     document.querySelectorAll('.side-location').forEach(button => button.classList.toggle('active', button.dataset.folder === folder));
     const isHome = folder === 'Media';
     const isMusic = folder === 'Music';
+    const isVideos = folder === 'Videos';
     const visiblePhotos = photos.filter(photo => fileLocations[photo.dataset.id] === folder && !deletedPhotoIds.has(photo.dataset.id) && !purgedPhotoIds.has(photo.dataset.id));
     const visibleTracks = audioTracks.filter((track, index) => trackLocations[index] === folder && !deletedTrackIndexes.has(index) && !purgedTrackIndexes.has(index));
     const childFolders = renderNestedFolders(folder);
@@ -557,10 +584,11 @@
     fileList.hidden = !isHome;
     retroGallery.hidden = isHome || isMusic || visiblePhotos.length === 0;
     musicLibrary.hidden = visibleTracks.length === 0;
-    folderEmpty.hidden = isHome || childFolders.length > 0 || visiblePhotos.length > 0 || visibleTracks.length > 0;
+    videoLibrary.hidden = !isVideos;
+    folderEmpty.hidden = isHome || isVideos || childFolders.length > 0 || visiblePhotos.length > 0 || visibleTracks.length > 0;
     photoViewer.hidden = true;
     galleryNote.textContent = `${visiblePhotos.length} picture(s) — double-click to open or drag to a folder`;
-    const count = (isHome ? 5 : visibleTracks.length + visiblePhotos.length) + childFolders.length;
+    const count = (isHome ? 5 : visibleTracks.length + visiblePhotos.length + (isVideos ? videoFiles.length : 0)) + childFolders.length;
     filesStatus.textContent = `${count} object(s)`;
   }
   document.querySelectorAll('.side-location').forEach(button => button.addEventListener('click', () => showFolder(button.dataset.folder)));
@@ -764,12 +792,54 @@
   }
   renderMusicLibrary();
 
+  function openVideo(index) {
+    const file = videoFiles[index];
+    if (!file) return;
+    videoElement.src = file.src;
+    videoPlayerName.textContent = `${file.name} - Video Player`;
+    videoPlayerCounter.textContent = `${index + 1} / ${videoFiles.length}`;
+    videoPlayer.hidden = false;
+    topZ += 1;
+    videoPlayer.style.zIndex = topZ + 30;
+    videoElement.play().catch(() => {});
+    filesStatus.textContent = file.name;
+  }
+  function renderVideoLibrary() {
+    videoGrid.replaceChildren();
+    videoFiles.forEach((file, index) => {
+      const button = document.createElement('button');
+      button.className = 'video-file';
+      button.type = 'button';
+      button.dataset.kind = 'video';
+      button.dataset.videoIndex = String(index);
+      button.innerHTML = '<span class="video-thumb"><img alt="" loading="lazy"><i>▶</i></span><b></b>';
+      button.querySelector('img').src = file.thumb;
+      button.querySelector('b').textContent = file.name;
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.video-file').forEach(item => item.classList.remove('selected'));
+        button.classList.add('selected');
+      });
+      button.addEventListener('dblclick', () => openVideo(index));
+      button.addEventListener('keydown', event => { if (event.key === 'Enter') openVideo(index); });
+      if (matchMedia('(pointer: coarse)').matches) button.addEventListener('click', () => openVideo(index));
+      videoGrid.append(button);
+    });
+    videoNote.textContent = `${videoFiles.length} video(s) — double-click to play`;
+  }
+  renderVideoLibrary();
+  makeFloatingDraggable(videoPlayer, document.getElementById('videoPlayerBar'));
+  document.getElementById('closeVideoPlayer').addEventListener('click', () => {
+    videoElement.pause();
+    videoPlayer.hidden = true;
+  });
+
   function selectedFileItem() {
-    return document.querySelector('.retro-photo.selected:not([hidden]), .music-file.selected:not([hidden])');
+    return document.querySelector('.retro-photo.selected:not([hidden]), .music-file.selected:not([hidden]), .video-file.selected:not([hidden])');
   }
   function copyOrCut(mode) {
     const item = selectedFileItem();
     if (!item) { filesStatus.textContent = 'Select a file first.'; return; }
+    if (item.dataset.kind === 'video') { filesStatus.textContent = 'The Videos folder is a read-only collection.'; return; }
     fileClipboard = {
       mode,
       kind: item.dataset.kind || 'image',
@@ -829,6 +899,7 @@
   function deleteSelected() {
     const item = selectedFileItem();
     if (!item) { filesStatus.textContent = 'Select a file first.'; return; }
+    if (item.dataset.kind === 'video') { filesStatus.textContent = 'The Videos folder is a read-only collection.'; return; }
     recordFileChange();
     if ((item.dataset.kind || 'image') === 'image') deletedPhotoIds.add(item.dataset.id);
     else deletedTrackIndexes.add(Number(item.dataset.trackIndex));
@@ -995,9 +1066,9 @@
     'browser-favorites': [['Show Saved Tabs', () => showBrowserHome()]],
     'browser-help': [['Call for help…', openHelp], ['About Explorer', () => { statusText.textContent = 'Maybeline Explorer · 1999'; }]],
     'files-file': [['Open', () => { const item = selectedFileItem() || document.querySelector('.nested-folder-row.selected'); if (item) item.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })); else filesStatus.textContent = 'Select a file or folder first.'; }], ['New Folder…', () => document.getElementById('newFolderBtn').click()], ['Properties', () => { const item = selectedFileItem() || document.querySelector('.nested-folder-row.selected'); filesStatus.textContent = item ? `${item.innerText.trim().split('\\n')[0]} · ${item.dataset.kind || 'File Folder'}` : `${folderLabel(currentFolder)} · File Folder`; }], ['Close', () => closeApp('files')]],
-    'files-edit': [['Undo', undoFileChange], ['Redo', redoFileChange], ['Cut', () => copyOrCut('cut')], ['Copy', () => copyOrCut('copy')], ['Paste', pasteClipboard], ['Delete', deleteSelected], ['Select all', () => document.querySelectorAll('.retro-photo:not([hidden]),.music-file:not([hidden])').forEach(item => item.classList.add('selected'))]],
-    'files-view': [['Large icons', () => { document.querySelectorAll('.gallery-grid,.music-grid').forEach(grid => grid.classList.remove('list-view')); filesStatus.textContent = 'Large icons view.'; }], ['List', () => { document.querySelectorAll('.gallery-grid,.music-grid').forEach(grid => grid.classList.add('list-view')); filesStatus.textContent = 'List view.'; }], ['Refresh', () => { showFolder(currentFolder, false); filesStatus.textContent = 'Folder refreshed.'; }]],
-    'files-tools': [['Sort by name', () => { [galleryGrid, musicGrid, nestedFolderList].forEach(grid => [...grid.children].sort((a,b) => a.innerText.localeCompare(b.innerText)).forEach(item => grid.append(item))); filesStatus.textContent = 'Sorted by name.'; }], ['Reset file locations', () => { if (!confirm('Reset all moved files, created folders, and deleted items?')) { filesStatus.textContent = 'Reset cancelled.'; return; } localStorage.removeItem(storageKey); localStorage.removeItem(trackLocationsKey); localStorage.removeItem(customFoldersKey); localStorage.removeItem('maybeline-deleted-photos'); localStorage.removeItem('maybeline-deleted-tracks'); localStorage.removeItem('maybeline-purged-photos'); localStorage.removeItem('maybeline-purged-tracks'); location.reload(); }]],
+    'files-edit': [['Undo', undoFileChange], ['Redo', redoFileChange], ['Cut', () => copyOrCut('cut')], ['Copy', () => copyOrCut('copy')], ['Paste', pasteClipboard], ['Delete', deleteSelected], ['Select all', () => document.querySelectorAll('.retro-photo:not([hidden]),.music-file:not([hidden]),.video-file:not([hidden])').forEach(item => item.classList.add('selected'))]],
+    'files-view': [['Large icons', () => { document.querySelectorAll('.gallery-grid,.music-grid,.video-grid').forEach(grid => grid.classList.remove('list-view')); filesStatus.textContent = 'Large icons view.'; }], ['List', () => { document.querySelectorAll('.gallery-grid,.music-grid,.video-grid').forEach(grid => grid.classList.add('list-view')); filesStatus.textContent = 'List view.'; }], ['Refresh', () => { showFolder(currentFolder, false); filesStatus.textContent = 'Folder refreshed.'; }]],
+    'files-tools': [['Sort by name', () => { [galleryGrid, musicGrid, videoGrid, nestedFolderList].forEach(grid => [...grid.children].sort((a,b) => a.innerText.localeCompare(b.innerText)).forEach(item => grid.append(item))); filesStatus.textContent = 'Sorted by name.'; }], ['Reset file locations', () => { if (!confirm('Reset all moved files, created folders, and deleted items?')) { filesStatus.textContent = 'Reset cancelled.'; return; } localStorage.removeItem(storageKey); localStorage.removeItem(trackLocationsKey); localStorage.removeItem(customFoldersKey); localStorage.removeItem('maybeline-deleted-photos'); localStorage.removeItem('maybeline-deleted-tracks'); localStorage.removeItem('maybeline-purged-photos'); localStorage.removeItem('maybeline-purged-tracks'); location.reload(); }]],
     'files-help': [['Call for help…', openHelp], ['About Files', () => { filesStatus.textContent = 'FILES.EXE · Maybeline system archive'; }]]
   };
   document.getElementById('undoBtn').addEventListener('click', undoFileChange);
@@ -1026,7 +1097,7 @@
   function showContextMenu(event, item) {
     event.preventDefault();
     if (item) {
-      document.querySelectorAll('.retro-photo,.music-file').forEach(file => file.classList.remove('selected'));
+      document.querySelectorAll('.retro-photo,.music-file,.video-file').forEach(file => file.classList.remove('selected'));
       item.classList.add('selected');
     }
     contextMenu.replaceChildren();
@@ -1040,7 +1111,7 @@
       ['↷', 'Redo', redoFileChange],
       ['ⓘ', 'Properties', () => { filesStatus.textContent = `${item.innerText.trim()} · ${item.dataset.kind || 'image'} file`; }]
     ] : [
-      ['▦', 'View: icons/list', () => document.querySelectorAll('.gallery-grid,.music-grid').forEach(grid => grid.classList.toggle('list-view'))],
+      ['▦', 'View: icons/list', () => document.querySelectorAll('.gallery-grid,.music-grid,.video-grid').forEach(grid => grid.classList.toggle('list-view'))],
       ['↕', 'Sort by name', () => menuDefinitions['files-tools'][0][1]()],
       ['↻', 'Refresh', () => showFolder(currentFolder, false)],
       ['📁', 'New folder…', () => document.getElementById('newFolderBtn').click()],
@@ -1061,7 +1132,7 @@
     contextMenu.style.top = `${Math.min(event.clientY, innerHeight - 320)}px`;
     contextMenu.hidden = false;
   }
-  document.querySelector('.files-content').addEventListener('contextmenu', event => showContextMenu(event, event.target.closest('.retro-photo,.music-file')));
+  document.querySelector('.files-content').addEventListener('contextmenu', event => showContextMenu(event, event.target.closest('.retro-photo,.music-file,.video-file')));
 
   function showDesktopContextMenu(event) {
     event.preventDefault();
