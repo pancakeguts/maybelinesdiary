@@ -370,21 +370,50 @@
     ['CAM_0007.MP4', 'assets/videos/CAM_0007.MP4'],
     ['TAPE_1999_02.MP4', 'assets/videos/TAPE_1999_02.MP4'],
     ['RECOVERED_03.MP4', 'assets/videos/RECOVERED_03.MP4'],
-    ['VIDEO_CD_04.MP4', 'assets/videos/VIDEO_CD_04.MP4'],
-    ['UNTITLED_05.MP4', 'assets/videos/UNTITLED_05.MP4'],
+    ['VIDEO_CD_04.MP4', 'assets/videos/VIDEO_CD_04.MP4', 3],
+    ['UNTITLED_05.MP4', 'assets/videos/UNTITLED_05.MP4', 2],
     ['CAMCORDER_06.MP4', 'assets/videos/CAMCORDER_06.MP4'],
-    ['TV_CAPTURE_07.MP4', 'assets/videos/TV_CAPTURE_07.MP4'],
+    ['TV_CAPTURE_07.MP4', 'assets/videos/TV_CAPTURE_07.MP4', 4],
     ['VHS_RIP_08.MP4', 'assets/videos/VHS_RIP_08.MP4'],
-    ['WEBCAM_09.MP4', 'assets/videos/WEBCAM_09.MP4'],
-    ['CARTOON_10.MP4', 'assets/videos/CARTOON_10.MP4'],
-    ['VIDEO_TAPE_11.MP4', 'assets/videos/VIDEO_TAPE_11.MP4'],
-    ['TV_RECORDING_12.MP4', 'assets/videos/TV_RECORDING_12.MP4'],
+    ['WEBCAM_09.MP4', 'assets/videos/WEBCAM_09.MP4', 2],
+    ['CARTOON_10.MP4', 'assets/videos/CARTOON_10.MP4', 3],
+    ['VIDEO_TAPE_11.MP4', 'assets/videos/VIDEO_TAPE_11.MP4', 3],
+    ['TV_RECORDING_12.MP4', 'assets/videos/TV_RECORDING_12.MP4', 3],
     ['OLD_CLIP_13.MP4', 'assets/videos/OLD_CLIP_13.MP4'],
     ['INTERVIEW_14.MP4', 'assets/videos/INTERVIEW_14.MP4'],
-    ['BODYBUILDING_15.MP4', 'assets/videos/BODYBUILDING_15.MP4'],
-    ['GYM_TAPE_16.MP4', 'assets/videos/GYM_TAPE_16.MP4'],
-    ['WORKOUT_TAPE_17.MP4', 'assets/videos/WORKOUT_TAPE_17.MP4']
-  ].map(([name, src], index) => ({ name, src, thumb: `assets/videos/thumbs/VIDEO_${String(index + 1).padStart(2, '0')}.jpg` }));
+    ['BODYBUILDING_15.MP4', 'assets/videos/BODYBUILDING_15.MP4', 8],
+    ['GYM_TAPE_16.MP4', 'assets/videos/GYM_TAPE_16.MP4', 2],
+    ['WORKOUT_TAPE_17.MP4', 'assets/videos/WORKOUT_TAPE_17.MP4', 6]
+  ].map(([name, src, partCount], index) => ({
+    name,
+    src,
+    partCount: partCount || 0,
+    thumb: `assets/videos/thumbs/VIDEO_${String(index + 1).padStart(2, '0')}.jpg`
+  }));
+  const videoBlobUrls = new Map();
+  let activeVideoRequest = 0;
+
+  async function getVideoSource(file) {
+    if (!file.partCount) return file.src;
+    if (videoBlobUrls.has(file.name)) return videoBlobUrls.get(file.name);
+
+    const parts = [];
+    for (let part = 1; part <= file.partCount; part += 1) {
+      const suffix = String(part).padStart(2, '0');
+      const partUrl = `${file.src}.${suffix}.part`;
+      const response = await fetch(partUrl, { cache: 'force-cache' });
+      if (!response.ok) throw new Error(`Missing ${partUrl}`);
+      parts.push(await response.blob());
+    }
+
+    const objectUrl = URL.createObjectURL(new Blob(parts, { type: 'video/mp4' }));
+    videoBlobUrls.set(file.name, objectUrl);
+    return objectUrl;
+  }
+
+  window.addEventListener('beforeunload', () => {
+    videoBlobUrls.forEach(url => URL.revokeObjectURL(url));
+  });
   let currentTrackIndex = -1;
   let audioContext;
   let audioSource;
@@ -792,17 +821,33 @@
   }
   renderMusicLibrary();
 
-  function openVideo(index) {
+  async function openVideo(index) {
     const file = videoFiles[index];
     if (!file) return;
-    videoElement.src = file.src;
-    videoPlayerName.textContent = `${file.name} - Video Player`;
+    const requestId = ++activeVideoRequest;
+    videoElement.pause();
+    videoElement.removeAttribute('src');
+    videoElement.load();
+    videoPlayerName.textContent = file.partCount ? `Loading ${file.name}...` : `${file.name} - Video Player`;
     videoPlayerCounter.textContent = `${index + 1} / ${videoFiles.length}`;
     videoPlayer.hidden = false;
     topZ += 1;
     videoPlayer.style.zIndex = topZ + 30;
-    videoElement.play().catch(() => {});
-    filesStatus.textContent = file.name;
+    filesStatus.textContent = file.partCount ? `Loading ${file.name}...` : file.name;
+
+    try {
+      const source = await getVideoSource(file);
+      if (requestId !== activeVideoRequest) return;
+      videoElement.src = source;
+      videoPlayerName.textContent = `${file.name} - Video Player`;
+      filesStatus.textContent = file.name;
+      videoElement.play().catch(() => {});
+    } catch (error) {
+      if (requestId !== activeVideoRequest) return;
+      videoPlayerName.textContent = `${file.name} - Could not load`;
+      filesStatus.textContent = `Could not load ${file.name}`;
+      console.error(error);
+    }
   }
   function renderVideoLibrary() {
     videoGrid.replaceChildren();
@@ -829,6 +874,7 @@
   renderVideoLibrary();
   makeFloatingDraggable(videoPlayer, document.getElementById('videoPlayerBar'));
   document.getElementById('closeVideoPlayer').addEventListener('click', () => {
+    activeVideoRequest += 1;
     videoElement.pause();
     videoPlayer.hidden = true;
   });
